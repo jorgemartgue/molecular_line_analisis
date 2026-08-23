@@ -260,10 +260,55 @@ Q_Tex : float
         rectahi = recta + k*sig_yfit
 
     # ============================================================
+    # Cifras significativas
+    # ============================================================
+
+    # T_ex
+    Tex_val = T_ex.to_value(u.K)
+    dTex_val = abs(deltaTex.to_value(u.K))
+
+    orden_T = int(np.floor(np.log10(dTex_val)))
+    primer_digito_T = int(dTex_val / 10**orden_T)
+
+    n_sig_T = 2 if primer_digito_T == 1 else 1
+    dec_T = -(orden_T - (n_sig_T - 1))
+
+    Tex_red = round(Tex_val, dec_T)
+    dTex_red = round(dTex_val, dec_T)
+
+    dec_T_plot = max(dec_T, 0)
+
+    # N_col
+    N_val = N_col.to_value(1/u.cm**2)
+    dN_val = abs(deltaN_col.to_value(1/u.cm**2))
+
+    exp_N = int(np.floor(np.log10(abs(N_val))))
+
+    N_esc = N_val / 10**exp_N
+    dN_esc = dN_val / 10**exp_N
+
+    orden_N = int(np.floor(np.log10(dN_esc)))
+    primer_digito_N = int(dN_esc / 10**orden_N)
+
+    n_sig_N = 2 if primer_digito_N == 1 else 1
+    dec_N = -(orden_N - (n_sig_N - 1))
+
+    N_red = round(N_esc, dec_N)
+    dN_red = round(dN_esc, dec_N)
+
+    dec_N_plot = max(dec_N, 0)
+
+    # ============================================================
     # Representación
     # ============================================================
 
-    fig, ax = plt.subplots(figsize=(7, 5.5))
+    FS_AXIS = 18
+    FS_TICKS = 15
+    FS_LEGEND = 14
+    FS_MOLECULE = 18
+    FS_RESULTS = 15
+
+    fig, ax = plt.subplots(figsize=(8, 6))
 
     # Datos experimentales con barras de error
     ax.errorbar(
@@ -272,8 +317,8 @@ Q_Tex : float
         yerr=deltay,
         fmt='o',
         color='red',
-        markersize=4,
-        capsize=3,
+        markersize=6,
+        capsize=4,
         label='Experimental data'
     )
 
@@ -283,7 +328,7 @@ Q_Tex : float
         recta,
         '--',
         color='blue',
-        linewidth=1.5,
+        linewidth=2,
         label='Linear fit'
     )
 
@@ -294,58 +339,74 @@ Q_Tex : float
             rectalo,
             rectahi,
             alpha=0.25,
-            label=fr'{k:.2g}$\sigma$ band'
+            label=fr'{k:.0f}$\sigma$ band'
         )
-    
-    # Resultados del ajuste en la leyenda
-    ax.plot(
-        [],
-        [],
-        ' ',
-        label=(
-            fr'$T_{{\rm ex}} = {T_ex.value:.1f} '
-            fr'\pm {deltaTex.value:.1f}\,$K'
-        )
+
+    # ============================================================
+    # Molécula dentro de la figura
+    # ============================================================
+
+    ax.text(
+        0.96,
+        0.95,
+        f'{elemento}',
+        transform=ax.transAxes,
+        ha='right',
+        va='top',
+        fontsize=FS_MOLECULE
     )
-    
-    ax.plot(
-        [],
-        [],
-        ' ',
-        label=(
-            fr'$N = {N_col.to_value(1/u.cm**2):.2e} '
-            fr'\pm {deltaN_col.to_value(1/u.cm**2):.2e}'
-            fr'\,\mathrm{{cm^{{-2}}}}$'
-        )
+
+    # ============================================================
+    # Resultados del ajuste
+    # ============================================================
+
+    results_text = (
+        fr'$T_{{\rm ex}}=-1/a='
+        fr'{Tex_red:.{dec_T_plot}f}'
+        fr'\pm{dTex_red:.{dec_T_plot}f}\,\mathrm{{K}}$'
+        '\n'
+        fr'$N_{{\rm col}}=Q(T_{{\rm ex}})e^b='
+        fr'({N_red:.{dec_N_plot}f}'
+        fr'\pm{dN_red:.{dec_N_plot}f})'
+        fr'\times10^{{{exp_N}}}'
+        fr'\,\mathrm{{cm^{{-2}}}}$'
+    )
+    ax.text(
+        0.96,
+        0.84,
+        results_text,
+        transform=ax.transAxes,
+        ha='right',
+        va='top',
+        fontsize=FS_RESULTS
     )
 
     # ============================================================
     # Ejes
     # ============================================================
-    
+
     ax.set_xlabel(
         r'$E_u$ [K]',
-        fontsize=13
+        fontsize=FS_AXIS
     )
-    
+
     ax.set_ylabel(
-        r'$\ln(\gamma_u W/g_u\,[\mathrm{cm}^{-2}])$',
-        fontsize=13
+        r'$\ln\left('
+        r'\frac{8\pi k\nu^2 W}'
+        r'{hc^3 A_{ul}g_u}'
+        r'\right)$'
+        r'$\,[\mathrm{cm}^{-2}]$',
+        fontsize=FS_AXIS
     )
-    
+
     ax.tick_params(
         axis='both',
-        labelsize=11
+        labelsize=FS_TICKS
     )
 
     # ============================================================
-    # Título y rejilla
+    # Rejilla
     # ============================================================
-
-    ax.set_title(
-        'Rotational diagram for ' + elemento,
-        fontsize=14
-    )
 
     ax.grid(
         True,
@@ -358,7 +419,7 @@ Q_Tex : float
 
     ax.legend(
         loc='lower left',
-        fontsize=10,
+        fontsize=FS_LEGEND,
         frameon=True
     )
 

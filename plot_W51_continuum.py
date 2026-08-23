@@ -10,15 +10,6 @@ Genera:
 4. W51 IRS2 — regiones usadas para los mapas
 5. W51 IRS2 — MM14, región usada para los mapas
 6. W51-E — región usada para los mapas
-
-Cambios principales:
-- IRS2 central: 0.003--0.3 Jy/beam, escala log con a=15.
-- MM14: 0.003--0.35 Jy/beam, escala square-root.
-- W51-E: mantiene normalización lineal, con zoom rectangular.
-- Las figuras de regiones de mapas reutilizan la misma normalización
-  que su figura correspondiente.
-- Se dibuja el beam del continuo y queda preparado un segundo beam
-  para los datos usados en los mapas.
 """
 
 import numpy as np
@@ -33,6 +24,7 @@ from astropy.visualization import (
     LogStretch,
     SqrtStretch,
 )
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astropy.visualization.wcsaxes import add_beam
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -55,8 +47,8 @@ RUTA_REGIONES = "/home/jorge/TFM/regiones/regiones_TFM.reg"
 RUTA_MAP_MM31_D2 = "/home/jorge/TFM/regiones/mm31_d2.reg"
 RUTA_MAP_NORTH = "/home/jorge/TFM/regiones/regionNORTH_mm35_mm24.reg"
 RUTA_MAP_MM14 = "/home/jorge/TFM/regiones/regionMM14map.reg"
-RUTA_MAP_E = "/home/jorge/TFM/regiones/regionEnorth.reg"
-
+RUTA_MAP_E_NORTH = "/home/jorge/TFM/regiones/regionEnorth.reg"
+RUTA_MAP_E_SOUTH = "/home/jorge/TFM/regiones/regionEsouth.reg"
 # Distancia adoptada a W51
 DISTANCIA_PC = 5400
 
@@ -69,8 +61,17 @@ CENTRO_MM14_RA = 290.91077479
 CENTRO_MM14_DEC = 14.51159009
 ANCHO_MM14 = 5.0
 
-CENTRO_E_RA = 290.9330
-CENTRO_E_DEC = 14.5088
+# W51-E North
+CENTRO_E_NORTH_RA = 290.9330
+CENTRO_E_NORTH_DEC = 14.50985
+ANCHO_E_NORTH = 9.0
+ALTO_E_NORTH = 8.0
+
+# W51-E South
+CENTRO_E_SOUTH_RA = 290.9330
+CENTRO_E_SOUTH_DEC = 14.50730
+ANCHO_E_SOUTH = 9.0
+ALTO_E_SOUTH = 8.0
 
 # Zoom rectangular en E para quitar zona vacía lateral
 ANCHO_E = 9.0
@@ -174,7 +175,7 @@ def añadir_barra_escala(
         y + 0.025 * alto,
         f"{longitud_pc:g} pc",
         color=color,
-        fontsize=10,
+        fontsize=FS_SCALE,
         fontweight="bold",
         ha="center",
         va="bottom",
@@ -273,12 +274,16 @@ def dibujar_regiones(
     regiones,
     fuentes=None,
     offsets=None,
+    colores=None,
 ):
     """Dibuja las elipses DS9 y sus etiquetas/velocidades."""
 
     if offsets is None:
         offsets = {}
 
+    if colores is None:
+        colores = {}
+    
     for region in regiones:
         texto = region.meta.get("text", "")
 
@@ -286,6 +291,7 @@ def dibujar_regiones(
             continue
 
         nombre = texto.split(",")[0].strip()
+        color = colores.get(nombre, "cyan")
 
         if fuentes is not None and nombre not in fuentes:
             continue
@@ -293,7 +299,7 @@ def dibujar_regiones(
         region_pix = region.to_pixel(wcs)
 
         artist = region_pix.as_artist(
-            edgecolor="cyan",
+            edgecolor=color,
             facecolor="none",
             linewidth=1.8,
         )
@@ -314,19 +320,19 @@ def dibujar_regiones(
         dx, dy = offsets.get(nombre, (8, 8))
 
         etiqueta = ax.annotate(
-            texto_plot,
-            xy=(
-                region_pix.center.x,
-                region_pix.center.y,
-            ),
-            xytext=(dx, dy),
-            textcoords="offset points",
-            color="cyan",
-            fontsize=8.5,
-            fontweight="bold",
-            ha="left",
-            va="bottom",
-        )
+    texto_plot,
+    xy=(
+        region_pix.center.x,
+        region_pix.center.y,
+    ),
+    xytext=(dx, dy),
+    textcoords="offset points",
+    color = color,
+    fontsize=FS_SOURCE,
+    fontweight="bold",
+    ha="left",
+    va="bottom",
+)
 
         etiqueta.set_path_effects([
             pe.Stroke(linewidth=2.0, foreground="black"),
@@ -358,19 +364,19 @@ def dibujar_cajas_mapa(
             dx, dy = offset
 
             texto = ax.annotate(
-                etiqueta,
-                xy=(
-                    region_pix.center.x,
-                    region_pix.center.y,
-                ),
-                xytext=(dx, dy),
-                textcoords="offset points",
-                color=color,
-                fontsize=9,
-                fontweight="bold",
-                ha="left",
-                va="bottom",
-            )
+    etiqueta,
+    xy=(
+        region_pix.center.x,
+        region_pix.center.y,
+    ),
+    xytext=(dx, dy),
+    textcoords="offset points",
+    color=color,
+    fontsize=FS_MAP_REGION,
+    fontweight="bold",
+    ha="left",
+    va="bottom",
+)
 
             texto.set_path_effects([
                 pe.Stroke(linewidth=2.0, foreground="black"),
@@ -382,20 +388,20 @@ def configurar_ejes(ax, formato_ra="hh:mm:ss.s", formato_dec="dd:mm:ss"):
     """Formato común de coordenadas."""
 
     ax.coords[0].set_axislabel(
-        "Right Ascension (J2000)",
-        fontsize=12,
+    "Right Ascension (J2000)",
+    fontsize=FS_AXIS,
     )
 
     ax.coords[1].set_axislabel(
-        "Declination (J2000)",
-        fontsize=12,
+    "Declination (J2000)",
+    fontsize=FS_AXIS,
     )
+
+    ax.coords[0].set_ticklabel(size=FS_TICKS)
+    ax.coords[1].set_ticklabel(size=FS_TICKS)
 
     ax.coords[0].set_major_formatter(formato_ra)
     ax.coords[1].set_major_formatter(formato_dec)
-
-    ax.coords[0].set_ticklabel(size=10)
-    ax.coords[1].set_ticklabel(size=10)
 
 
 
@@ -415,7 +421,7 @@ def añadir_beams(ax):
     )
 
 
-def crear_figura_base(norm, figsize=(8, 7)):
+def crear_figura_base(norm, figsize=(6.2, 5.5)):
     """Crea figura, WCSAxes e imagen con formato común."""
 
     fig = plt.figure(figsize=figsize)
@@ -435,21 +441,55 @@ def crear_figura_base(norm, figsize=(8, 7)):
 
     return fig, ax, im
 
+def añadir_titulo_interno(ax, titulo):
+    """Añade el título dentro del panel, en la esquina superior izquierda."""
+
+    texto = ax.text(
+    0.03,
+    0.97,
+    titulo,
+    transform=ax.transAxes,
+    color="white",
+    fontsize=FS_TITLE,
+    fontweight="bold",
+    ha="left",
+    va="top",
+    zorder=20,
+)
+
+    texto.set_path_effects([
+        pe.Stroke(
+            linewidth=2.5,
+            foreground="black",
+        ),
+        pe.Normal(),
+    ])
 
 def añadir_colorbar(fig, ax, im):
-    """Añade la barra de color común."""
+    """Añade una colorbar con la misma altura que el panel principal."""
+
+    divider = make_axes_locatable(ax)
+
+    cax = divider.append_axes(
+        "right",
+        size="4%",
+        pad=0.12,
+        axes_class=plt.Axes,
+    )
 
     cbar = fig.colorbar(
         im,
-        ax=ax,
-        pad=0.02,
-        fraction=0.046,
+        cax=cax,
     )
 
     cbar.set_label(
-        "Intensity [Jy beam$^{-1}$]",
-        fontsize=11,
-    )
+    "Intensity [Jy beam$^{-1}$]",
+    fontsize=FS_COLORBAR,
+)
+
+    cbar.ax.tick_params(
+    labelsize=FS_COLORBAR_TICKS,
+)
 
     return cbar
 
@@ -532,7 +572,7 @@ def añadir_doble_beam(
 
     # Separación horizontal
     x_cont = xmin + 0.080 * ancho
-    x_ana = xmin + 0.180 * ancho
+    x_ana = xmin + 0.230 * ancho
 
     # ========================================================
     # Beam continuo
@@ -579,7 +619,7 @@ def añadir_doble_beam(
         y_texto,
         "Continuum",
         color="white",
-        fontsize=8.5,
+        fontsize=FS_BEAM,
         ha="center",
         va="bottom",
         zorder=11
@@ -637,11 +677,15 @@ reg_mm14 = Regions.read(
     format="ds9",
 )
 
-reg_E = Regions.read(
-    RUTA_MAP_E,
+reg_E_north = Regions.read(
+    RUTA_MAP_E_NORTH,
     format="ds9",
 )
 
+reg_E_south = Regions.read(
+    RUTA_MAP_E_SOUTH,
+    format="ds9",
+)
 # ============================================================
 # 6. CONFIGURACIÓN DE FUENTES
 # ============================================================
@@ -655,11 +699,11 @@ FUENTES_CENTRO = [
 ]
 
 OFFSETS_CENTRO = {
-    "north": (-20, 18),
-    "ALMAmm35": (-10, 18),
-    "ALMAmm24": (8, 15),
-    "ALMAmm31": (8, -28),
-    "d2": (8, -28),
+    "north": (-40, 25),
+    "ALMAmm35": (18, 10),
+    "ALMAmm24": (-65, -42),
+    "ALMAmm31": (-10, -45),
+    "d2": (-20, -45),
 }
 
 FUENTES_MM14 = [
@@ -670,18 +714,80 @@ OFFSETS_MM14 = {
     "ALMAmm14": (12, 10),
 }
 
-FUENTES_E = [
+FUENTES_E_NORTH = [
     "e2e",
     "e2w",
+]
+
+OFFSETS_E_NORTH = {
+    "e2e": (10, 18),
+    "e2w": (10, -28),
+}
+
+FUENTES_E_SOUTH = [
     "e8mm",
 ]
 
-OFFSETS_E = {
-    "e2e": (10, 18),
-    "e2w": (10, -28),
+OFFSETS_E_SOUTH = {
     "e8mm": (10, 12),
 }
 
+# ============================================================
+# TAMAÑOS DE TEXTO
+# ============================================================
+
+FS_TITLE = 16
+FS_AXIS = 18
+FS_TICKS = 15
+FS_SOURCE = 11
+FS_MAP_REGION = 10
+FS_COLORBAR = 16
+FS_COLORBAR_TICKS = 14
+FS_SCALE = 13
+FS_BEAM = 11
+
+# ============================================================
+# COLORES DE LAS REGIONES COMPACTAS
+# ============================================================
+
+COLORES_COMPACTAS = {
+    # IRS2 central
+    "north": "red",
+    "ALMAmm35": "lime",
+    "ALMAmm24": "yellow",
+    "ALMAmm31": "magenta",
+    "d2": "springgreen",
+
+    # MM14
+    "ALMAmm14": "violet",
+
+    # W51-E North
+    "e2e": "magenta",
+    "e2w": "lime",
+
+    # W51-E South
+    "e8mm": "magenta",
+}
+
+COLORES_CENTRO = {
+    nombre: COLORES_COMPACTAS[nombre]
+    for nombre in FUENTES_CENTRO
+}
+
+COLORES_MM14 = {
+    nombre: COLORES_COMPACTAS[nombre]
+    for nombre in FUENTES_MM14
+}
+
+COLORES_E_NORTH = {
+    nombre: COLORES_COMPACTAS[nombre]
+    for nombre in FUENTES_E_NORTH
+}
+
+COLORES_E_SOUTH = {
+    nombre: COLORES_COMPACTAS[nombre]
+    for nombre in FUENTES_E_SOUTH
+}
 
 # ============================================================
 # 7. NORMALIZACIONES
@@ -716,7 +822,7 @@ print(
 # ------------------------------------------------------------
 
 vmin_mm14 = 3e-3
-vmax_mm14 = 0.35
+vmax_mm14 = 0.1
 
 norm_mm14 = ImageNormalize(
     vmin=vmin_mm14,
@@ -740,13 +846,13 @@ print(
 valores_E = valores_zoom(
     imagen,
     wcs,
-    ra_deg=CENTRO_E_RA,
-    dec_deg=CENTRO_E_DEC,
+    ra_deg=290.9330,
+    dec_deg=14.5088,
     ancho_arcsec=ANCHO_E,
-    alto_arcsec=ALTO_E,
+    alto_arcsec=14.0,
 )
 
-vmin_E = np.nanpercentile(valores_E, 1)
+vmin_E = 0.0
 vmax_E = np.nanmax(valores_E)
 
 norm_E = ImageNormalize(
@@ -768,12 +874,31 @@ print(
 
 fig, ax, im = crear_figura_base(norm_centro)
 
+# Regiones compactas
 dibujar_regiones(
     ax,
     wcs,
     regiones,
     fuentes=FUENTES_CENTRO,
     offsets=OFFSETS_CENTRO,
+    colores=COLORES_CENTRO,
+)
+
+# Regiones utilizadas para los mapas
+dibujar_cajas_mapa(
+    ax,
+    wcs,
+    reg_mm31_d2,
+    etiqueta="MM31 + d2",
+    offset=(0, 55),
+)
+
+dibujar_cajas_mapa(
+    ax,
+    wcs,
+    reg_north,
+    etiqueta="NORTH + MM35 + MM24",
+    offset=(-75, 55),
 )
 
 hacer_zoom(
@@ -784,21 +909,14 @@ hacer_zoom(
     ancho_arcsec=ANCHO_IRS2,
 )
 
-añadir_barra_escala(
-    ax,
-    wcs,
-    longitud_pc=LONGITUD_ESCALA_PC,
-)
-
+añadir_barra_escala(ax, wcs, LONGITUD_ESCALA_PC)
 añadir_beams(ax)
-
 configurar_ejes(ax)
 añadir_colorbar(fig, ax, im)
 
-ax.set_title(
-    "W51 IRS2 — central region — continuum",
-    fontsize=14,
-    pad=12,
+añadir_titulo_interno(
+    ax,
+    "a) W51 IRS2 — central region",
 )
 
 guardar_figura("W51_IRS2_central")
@@ -816,6 +934,15 @@ dibujar_regiones(
     regiones,
     fuentes=FUENTES_MM14,
     offsets=OFFSETS_MM14,
+    colores= COLORES_MM14
+)
+
+dibujar_cajas_mapa(
+    ax,
+    wcs,
+    reg_mm14,
+    etiqueta="MM14",
+    offset=(80, 95),
 )
 
 hacer_zoom(
@@ -826,28 +953,21 @@ hacer_zoom(
     ancho_arcsec=ANCHO_MM14,
 )
 
-añadir_barra_escala(
-    ax,
-    wcs,
-    longitud_pc=LONGITUD_ESCALA_PC,
-)
-
+añadir_barra_escala(ax, wcs, LONGITUD_ESCALA_PC)
 añadir_beams(ax)
-
 configurar_ejes(ax)
 añadir_colorbar(fig, ax, im)
 
-ax.set_title(
-    "W51 IRS2 — MM14 — continuum",
-    fontsize=14,
-    pad=12,
+añadir_titulo_interno(
+    ax,
+    "b) W51 IRS2 — MM14",
 )
 
 guardar_figura("W51_IRS2_MM14")
 
 
 # ============================================================
-# 10. FIGURA 3 — W51-E
+# 10. FIGURA 3 — W51-E NORTH
 # ============================================================
 
 fig, ax, im = crear_figura_base(norm_E)
@@ -856,25 +976,29 @@ dibujar_regiones(
     ax,
     wcs,
     regiones,
-    fuentes=FUENTES_E,
-    offsets=OFFSETS_E,
+    fuentes=FUENTES_E_NORTH,
+    offsets=OFFSETS_E_NORTH,
+    colores= COLORES_E_NORTH
+)
+
+dibujar_cajas_mapa(
+    ax,
+    wcs,
+    reg_E_north,
+    etiqueta="E North",
+    offset=(60, 60),
 )
 
 hacer_zoom(
     ax,
     wcs,
-    ra_deg=CENTRO_E_RA,
-    dec_deg=CENTRO_E_DEC,
-    ancho_arcsec=ANCHO_E,
-    alto_arcsec=ALTO_E,
+    ra_deg=CENTRO_E_NORTH_RA,
+    dec_deg=CENTRO_E_NORTH_DEC,
+    ancho_arcsec=ANCHO_E_NORTH,
+    alto_arcsec=ALTO_E_NORTH,
 )
 
-añadir_barra_escala(
-    ax,
-    wcs,
-    longitud_pc=LONGITUD_ESCALA_PC,
-)
-
+añadir_barra_escala(ax, wcs, LONGITUD_ESCALA_PC)
 añadir_beams(ax)
 
 configurar_ejes(
@@ -885,138 +1009,47 @@ configurar_ejes(
 
 añadir_colorbar(fig, ax, im)
 
-ax.set_title(
-    "W51-E — continuum",
-    fontsize=14,
-    pad=12,
+añadir_titulo_interno(
+    ax,
+    "c) W51-E North",
 )
 
-guardar_figura("W51_E")
+guardar_figura("W51_E_north")
 
 
 # ============================================================
-# 11. FIGURA 4 — REGIONES DE MAPAS EN IRS2 CENTRAL
+# 11. FIGURA 4 — W51-E SOUTH
 # ============================================================
-# IMPORTANTE: usamos exactamente la misma normalización que en
-# la figura principal de IRS2 para permitir comparación directa.
-
-fig, ax, im = crear_figura_base(norm_centro)
-
-dibujar_cajas_mapa(
-    ax,
-    wcs,
-    reg_mm31_d2,
-    etiqueta="MM31 + d2",
-    offset=(8, -22),
-)
-
-dibujar_cajas_mapa(
-    ax,
-    wcs,
-    reg_north,
-    etiqueta="NORTH + MM35 + MM24",
-    offset=(8, 10),
-)
-
-hacer_zoom(
-    ax,
-    wcs,
-    ra_deg=CENTRO_IRS2_RA,
-    dec_deg=CENTRO_IRS2_DEC,
-    ancho_arcsec=ANCHO_IRS2,
-)
-
-añadir_barra_escala(
-    ax,
-    wcs,
-    longitud_pc=LONGITUD_ESCALA_PC,
-)
-
-añadir_beams(ax)
-configurar_ejes(ax)
-añadir_colorbar(fig, ax, im)
-
-ax.set_title(
-    "W51 IRS2 — map regions",
-    fontsize=14,
-    pad=12,
-)
-
-guardar_figura("W51_IRS2_map_regions")
-
-
-# ============================================================
-# 12. FIGURA 5 — REGIÓN DE MAPA MM14
-# ============================================================
-# Misma normalización que la figura principal de MM14.
-
-fig, ax, im = crear_figura_base(norm_mm14)
-
-dibujar_cajas_mapa(
-    ax,
-    wcs,
-    reg_mm14,
-    etiqueta="MM14",
-    offset=(8, 8),
-)
-
-hacer_zoom(
-    ax,
-    wcs,
-    ra_deg=CENTRO_MM14_RA,
-    dec_deg=CENTRO_MM14_DEC,
-    ancho_arcsec=ANCHO_MM14,
-)
-
-añadir_barra_escala(
-    ax,
-    wcs,
-    longitud_pc=LONGITUD_ESCALA_PC,
-)
-
-añadir_beams(ax)
-configurar_ejes(ax)
-añadir_colorbar(fig, ax, im)
-
-ax.set_title(
-    "W51 IRS2 — MM14 map region",
-    fontsize=14,
-    pad=12,
-)
-
-guardar_figura("W51_IRS2_MM14_map_region")
-
-
-# ============================================================
-# 13. FIGURA 6 — REGIÓN DE MAPA W51-E
-# ============================================================
-# Misma normalización y mismo zoom rectangular que la figura de E.
 
 fig, ax, im = crear_figura_base(norm_E)
 
+dibujar_regiones(
+    ax,
+    wcs,
+    regiones,
+    fuentes=FUENTES_E_SOUTH,
+    offsets=OFFSETS_E_SOUTH,
+    colores= COLORES_E_SOUTH    
+)
+
 dibujar_cajas_mapa(
     ax,
     wcs,
-    reg_E,
-    etiqueta="e2e + e2w",
-    offset=(8, 8),
+    reg_E_south,
+    etiqueta="E South",
+    offset=(-50, -40),
 )
 
 hacer_zoom(
     ax,
     wcs,
-    ra_deg=CENTRO_E_RA,
-    dec_deg=CENTRO_E_DEC,
-    ancho_arcsec=ANCHO_E,
-    alto_arcsec=ALTO_E,
+    ra_deg=CENTRO_E_SOUTH_RA,
+    dec_deg=CENTRO_E_SOUTH_DEC,
+    ancho_arcsec=ANCHO_E_SOUTH,
+    alto_arcsec=ALTO_E_SOUTH,
 )
 
-añadir_barra_escala(
-    ax,
-    wcs,
-    longitud_pc=LONGITUD_ESCALA_PC,
-)
-
+añadir_barra_escala(ax, wcs, LONGITUD_ESCALA_PC)
 añadir_beams(ax)
 
 configurar_ejes(
@@ -1027,10 +1060,10 @@ configurar_ejes(
 
 añadir_colorbar(fig, ax, im)
 
-ax.set_title(
-    "W51-E — map region",
-    fontsize=14,
-    pad=12,
+añadir_titulo_interno(
+    ax,
+    "d) W51-E South",
 )
 
-guardar_figura("W51_E_map_region")
+guardar_figura("W51_E_south")
+
