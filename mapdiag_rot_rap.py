@@ -14,14 +14,21 @@ from astropy.wcs import WCS
 # CONFIGURACIÓN
 # ============================================================
 
-REGION = "E_NORTH"
-MOLECULA = "CH3CCH_v0"
+REGION = "mm31_d2"
+MOLECULA = "C2H5OH_anti"
 
-RUTA_MAPAS = (
+TIPO_MAPA = "diagrot"
+
+RUTA_BASE_MAPAS = (
     Path.home()
     / "TFM"
+    / "maps_21Agosto"
     / "maps"
-    / "diagrot"
+)
+
+RUTA_MAPAS = (
+    RUTA_BASE_MAPAS
+    / TIPO_MAPA
     / REGION
     / MOLECULA
 )

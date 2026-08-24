@@ -8,35 +8,111 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import matplotlib.patheffects as pe
 from regions import Regions
+from matplotlib.patches import Ellipse
+from astropy.wcs.utils import proj_plane_pixel_scales
+import astropy.units as u
 
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
 
-REGION = "NORTH_MAP"            # cambia esto si hace falta
-MOLECULA = "C2H5OH_g"      # cambia esto por la molécula ajustada
-REGIONES_DIR = Path.home() / "TFM" / "regiones"
+REGION = "E_NORTH"
+MOLECULA = "CH3CN"
+# MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v_t=0$"
+# MOLECULA_LABEL = r"$\mathrm{anti-C_2H_5OH}$"
+# MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
+# MOLECULA_LABEL = r"$\mathrm{C_2H_5CN}$"
+MOLECULA_LABEL = r"$\mathrm{CH_3CN}$"
 
-RUTA_REGION_NORTH = REGIONES_DIR / "regionNORTH.reg"
-RUTA_REGION_MM35 = REGIONES_DIR / "regionMM35.reg"
-RUTA_REGION_MM24 = REGIONES_DIR / "regionMM24.reg"
+REGIONES_DIR = (
+    Path.home()
+    / "TFM"
+    / "regiones"
+)
+
+RUTA_REGION_NORTH = (
+    REGIONES_DIR
+    / "regionNORTH.reg"
+)
+
+RUTA_REGION_MM35 = (
+    REGIONES_DIR
+    / "regionMM35.reg"
+)
+
+RUTA_REGION_MM24 = (
+    REGIONES_DIR
+    / "regionMM24.reg"
+)
+
+BEAM_FITS = (
+    Path.home()
+    / "TFM"
+    / "reprojected"
+    / "W51-IRS2_B6_spw0_12M_spw0.JvM.image.pbcor-reprojected-cube.fits"
+)
+
+
+# ============================================================
+# ESTILO DE FIGURAS
+# ============================================================
+
+FS_AXIS = 20
+FS_TICKS = 16
+FS_REGION = 18
+FS_METHOD = 17
+FS_PANEL = 19
+FS_COLORBAR = 18
+FS_COLORBAR_TICKS = 15
+FS_MOLECULE = 25
+
 # ------------------------------------------------------------
-# Rutas
+# Directorio base de mapas
+# ------------------------------------------------------------
+
+MAPS_DIR = (
+    Path.home()
+    / "TFM"
+    / "maps_21Agosto"
+    / "maps"
+)
+
+
+# ------------------------------------------------------------
+# Mapas chi2
 # ------------------------------------------------------------
 
 CHI2_DIR = (
-    Path.home()
-    / "TFM"
-    / "tables"
-    / "chi2_maps"
+    MAPS_DIR
+    / "chi2"
     / REGION
     / MOLECULA
 )
 
+# ============================================================
+# REGIONES COMPACTAS
+# ============================================================
+
+REGIONES_COMPACTAS = {
+    "mm31_d2": [
+        ("d2", REGIONES_DIR / "regionMF2.reg"),
+        ("MM31", REGIONES_DIR / "regionMM31.reg"),
+    ],
+
+    "E_NORTH": [
+        ("NORTH", REGIONES_DIR / "regionNORTH.reg"),
+        ("MM35", REGIONES_DIR / "regionMM35.reg"),
+        ("MM24", REGIONES_DIR / "regionMM24.reg"),
+    ],
+}
+
+
+# ------------------------------------------------------------
+# Mapas de diagrama rotacional
+# ------------------------------------------------------------
+
 DIAGROT_DIR = (
-    Path.home()
-    / "TFM"
-    / "maps"
+    MAPS_DIR
     / "diagrot"
     / REGION
     / MOLECULA
@@ -44,11 +120,12 @@ DIAGROT_DIR = (
 
 REGIONES_MAPA = []
 
-for nombre, ruta_region in [
-    ("NORTH", RUTA_REGION_NORTH),
-    ("MM35", RUTA_REGION_MM35),
-    ("MM24", RUTA_REGION_MM24)
-]:
+if REGION not in REGIONES_COMPACTAS:
+    raise ValueError(
+        f"No hay regiones compactas definidas para {REGION}"
+    )
+
+for nombre, ruta_region in REGIONES_COMPACTAS[REGION]:
 
     if not ruta_region.exists():
         raise FileNotFoundError(
@@ -71,6 +148,19 @@ print(CHI2_DIR)
 print("[plot_maps] Directorio diagrot:")
 print(DIAGROT_DIR)
 
+if not BEAM_FITS.exists():
+    raise FileNotFoundError(
+        f"No existe el cubo usado para el beam:\n{BEAM_FITS}"
+    )
+
+with fits.open(BEAM_FITS) as hdul:
+    HEADER_BEAM = hdul[0].header.copy()
+
+print("\n[beam]")
+print("FITS :", BEAM_FITS.name)
+print("BMAJ :", HEADER_BEAM.get("BMAJ"))
+print("BMIN :", HEADER_BEAM.get("BMIN"))
+print("BPA  :", HEADER_BEAM.get("BPA"))
 
 # ============================================================
 # FUNCIONES
@@ -225,6 +315,74 @@ def buscar_mapa_diagrot(base_dir, parametro):
 
     return encontrados[0]
 
+def dibujar_beam(
+    ax,
+    wcs_mapa,
+    header_beam,
+    color="white",
+    edgecolor="black",
+    x_frac=0.12,
+    y_frac=0.12,
+):
+    """
+    Dibuja el synthesized beam usando BMAJ, BMIN y BPA
+    del cubo ALMA original.
+    """
+
+    bmaj = header_beam.get("BMAJ")
+    bmin = header_beam.get("BMIN")
+    bpa = header_beam.get("BPA")
+
+    if (
+        bmaj is None
+        or bmin is None
+        or bpa is None
+    ):
+        print(
+            "[beam] El cubo original no contiene "
+            "BMAJ/BMIN/BPA."
+        )
+        return
+
+    # Escala angular del mapa representado [deg/pixel]
+    pixel_scales = proj_plane_pixel_scales(
+        wcs_mapa
+    )
+
+    pixscale_x = abs(pixel_scales[0])
+    pixscale_y = abs(pixel_scales[1])
+
+    # BMAJ y BMIN están en grados
+    beam_width = bmin / pixscale_x
+    beam_height = bmaj / pixscale_y
+
+    # Tamaño del mapa
+    ny, nx = ax.images[0].get_array().shape
+
+    # Posición: esquina inferior izquierda
+    x = x_frac * nx
+    y = y_frac * ny
+
+    print(
+        f"[beam] "
+        f"{bmaj * 3600:.3f}\" × "
+        f"{bmin * 3600:.3f}\"  "
+        f"PA={bpa:.1f} deg"
+    )
+
+    beam = Ellipse(
+        (x, y),
+        width=beam_width,
+        height=beam_height,
+        angle=90 + bpa,
+        facecolor=color,
+        edgecolor=edgecolor,
+        linewidth=1.5,
+        zorder=30,
+    )
+
+    ax.add_patch(beam)
+
 def dibujar_regiones_mapa(
     ax,
     wcs,
@@ -244,7 +402,7 @@ def dibujar_regiones_mapa(
         artist = region_pix.as_artist(
             edgecolor=color,
             facecolor="none",
-            linewidth=2.0,
+            linewidth=2.5,
             zorder=10
         )
 
@@ -260,7 +418,7 @@ def dibujar_regiones_mapa(
             xytext=(7, 7),
             textcoords="offset points",
             color=color,
-            fontsize=9,
+            fontsize=FS_REGION,
             fontweight="bold",
             ha="left",
             va="bottom",
@@ -324,7 +482,7 @@ def plot_mapa(
     wcs = WCS(header).celestial
 
     fig = plt.figure(
-        figsize=(7, 6)
+        figsize=(6, 5)
     )
 
     ax = fig.add_subplot(
@@ -353,14 +511,22 @@ def plot_mapa(
     dec = ax.coords[1]
 
     ra.set_axislabel(
-        "Right Ascension (J2000)",
-        fontsize=16
-    )
+    "R.A. (J2000)",
+    fontsize=FS_AXIS
+)
 
     dec.set_axislabel(
-        "Declination (J2000)",
-        fontsize=16
-    )
+    "Dec. (J2000)",
+    fontsize=FS_AXIS
+)
+
+    ra.set_ticklabel(
+    size=FS_TICKS
+)
+
+    dec.set_ticklabel(
+    size=FS_TICKS
+)
 
     ra.set_major_formatter(
         "hh:mm:ss.s"
@@ -375,15 +541,7 @@ def plot_mapa(
     
     ra.set_ticklabel_position("b")
     dec.set_ticklabel_position("l")
-
-    ra.set_ticklabel(
-        size=13
-    )
-
-    dec.set_ticklabel(
-        size=13
-    )
-
+    
     # ========================================================
     # Colorbar
     # ========================================================
@@ -441,6 +599,7 @@ def comparar_mapas(
     titulo1,
     titulo2,
     label_cbar,
+    panel_label,
     cmap="inferno",
     log=False,
     percent_min=5,
@@ -450,7 +609,17 @@ def comparar_mapas(
     """
     Representa dos mapas utilizando coordenadas celestes
     y exactamente la misma escala de color.
+
+    Panel izquierdo:
+        Rotational diagram
+
+    Panel derecho:
+        chi2 fit
     """
+
+    # ========================================================
+    # Preparar datos
+    # ========================================================
 
     data1_plot = np.array(
         data1,
@@ -508,7 +677,7 @@ def comparar_mapas(
     )
 
     # ========================================================
-    # Escala común
+    # Escala de color común
     # ========================================================
 
     vmin = np.nanpercentile(
@@ -547,7 +716,7 @@ def comparar_mapas(
     )
 
     # ========================================================
-    # Primer mapa
+    # PANEL IZQUIERDO — ROTATIONAL DIAGRAM
     # ========================================================
 
     im = ax1.imshow(
@@ -556,51 +725,131 @@ def comparar_mapas(
         cmap=cmap,
         vmin=vmin,
         vmax=vmax,
+        interpolation="nearest",
     )
 
+    # Regiones compactas
     dibujar_regiones_mapa(
         ax1,
         wcs1,
         REGIONES_MAPA
     )
 
-    ax1.set_title(
-        titulo1,
-        fontsize=14,
-        pad=10
+    # Beam
+    dibujar_beam(
+        ax1,
+        wcs1,
+        HEADER_BEAM
     )
+
+    # --------------------------------------------------------
+    # Nombre del método
+    # --------------------------------------------------------
+
+    ax1.text(
+        0.96,
+        0.05,
+        titulo1,
+        transform=ax1.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=FS_METHOD,
+        color="white",
+        fontweight="bold",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black"
+            ),
+            pe.Normal()
+        ]
+    )
+
+    # --------------------------------------------------------
+    # Identificador a) / b)
+    # --------------------------------------------------------
+
+    ax1.text(
+        0.03,
+        0.96,
+        panel_label,
+        transform=ax1.transAxes,
+        ha="left",
+        va="top",
+        fontsize=FS_PANEL,
+        fontweight="bold",
+        color="white",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black"
+            ),
+            pe.Normal()
+        ]
+    )
+
+    # --------------------------------------------------------
+    # Coordenadas panel izquierdo
+    # --------------------------------------------------------
 
     ra1 = ax1.coords[0]
     dec1 = ax1.coords[1]
 
     ra1.set_axislabel(
-        "Right Ascension (J2000)",
-        fontsize=15
+        "R.A. (J2000)",
+        fontsize=FS_AXIS
     )
 
     dec1.set_axislabel(
-        "Declination (J2000)",
-        fontsize=15
+        "Dec. (J2000)",
+        fontsize=FS_AXIS
     )
 
+    # Más ticks principales
+    ra1.set_ticks(
+        spacing=0.75 * u.arcsec
+    )
+
+    dec1.set_ticks(
+        spacing=0.5 * u.arcsec
+    )
+
+    # Formato
     ra1.set_major_formatter(
-        "hh:mm:ss.s"
+        "hh:mm:ss.ss"
     )
 
     dec1.set_major_formatter(
-        "dd:mm:ss"
+        "dd:mm:ss.s"
     )
 
+    # Tamaño de números
     ra1.set_ticklabel(
-        size=12
+        size=FS_TICKS
     )
 
     dec1.set_ticklabel(
-        size=12
+        size=FS_TICKS
     )
 
+    # Ticks en los bordes
+    ra1.set_ticks_position("bt")
+    dec1.set_ticks_position("lr")
+
+    ra1.set_ticklabel_position("b")
+    dec1.set_ticklabel_position("l")
+
+    # Ticks menores
+    ra1.display_minor_ticks(True)
+    dec1.display_minor_ticks(True)
+
+    ra1.set_minor_frequency(2)
+    dec1.set_minor_frequency(2)
+
     # ========================================================
-    # Segundo mapa
+    # PANEL DERECHO — CHI2 FIT
     # ========================================================
 
     ax2.imshow(
@@ -609,93 +858,162 @@ def comparar_mapas(
         cmap=cmap,
         vmin=vmin,
         vmax=vmax,
+        interpolation="nearest",
     )
 
+    # Regiones compactas
     dibujar_regiones_mapa(
         ax2,
         wcs2,
         REGIONES_MAPA
     )
 
-    ax2.set_title(
+    # --------------------------------------------------------
+    # Nombre de la molécula
+    # --------------------------------------------------------
+
+    ax2.text(
+        0.96,
+        0.96,
+        MOLECULA_LABEL,
+        transform=ax2.transAxes,
+        ha="right",
+        va="top",
+        fontsize=FS_MOLECULE,
+        fontweight="bold",
+        color="white",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black"
+                ),
+            pe.Normal()
+            ]
+        )
+
+    # --------------------------------------------------------
+    # Nombre del método
+    # --------------------------------------------------------
+
+    ax2.text(
+        0.96,
+        0.05,
         titulo2,
-        fontsize=14,
-        pad=10
+        transform=ax2.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=FS_METHOD,
+        color="white",
+        fontweight="bold",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black"
+            ),
+            pe.Normal()
+        ]
     )
+
+    # --------------------------------------------------------
+    # Coordenadas panel derecho
+    # --------------------------------------------------------
 
     ra2 = ax2.coords[0]
     dec2 = ax2.coords[1]
 
     ra2.set_axislabel(
-        "Right Ascension (J2000)",
-        fontsize=15
+        "R.A. (J2000)",
+        fontsize=FS_AXIS
     )
 
-    # --------------------------------------------------------
-    # IMPORTANTE:
-    # quitamos la etiqueta de Dec en el segundo panel
-    # para no duplicar información y evitar solapamiento.
-    # --------------------------------------------------------
-
+    # No repetimos Dec
     dec2.set_axislabel("")
 
+    # Mismo espaciado que el panel izquierdo
+    ra2.set_ticks(
+        spacing=0.75 * u.arcsec
+    )
+
+    dec2.set_ticks(
+        spacing=0.5 * u.arcsec
+    )
+
+    # Formato
     ra2.set_major_formatter(
-        "hh:mm:ss.s"
+        "hh:mm:ss.ss"
     )
 
     dec2.set_major_formatter(
-        "dd:mm:ss"
+        "dd:mm:ss.s"
     )
 
+    # Tamaño de números
     ra2.set_ticklabel(
-        size=12
+        size=FS_TICKS
     )
 
     dec2.set_ticklabel(
-        size=12
+        size=FS_TICKS
     )
 
-    # Opcional: ocultamos las etiquetas numéricas de Dec
-    # del segundo panel porque ambos mapas cubren la misma región.
+    # Ticks en los bordes
+    ra2.set_ticks_position("bt")
+    dec2.set_ticks_position("lr")
+
+    ra2.set_ticklabel_position("b")
+
+    # No mostramos números de Dec
+    # en el segundo panel
     dec2.set_ticklabel_visible(False)
+
+    # Ticks menores
+    ra2.display_minor_ticks(True)
+    dec2.display_minor_ticks(True)
+
+    ra2.set_minor_frequency(2)
+    dec2.set_minor_frequency(2)
+
+    # ========================================================
+    # Espaciado de la figura
+    # ========================================================
+
+    plt.subplots_adjust(
+        left=0.08,
+        right=0.88,
+        bottom=0.15,
+        top=0.95,
+        wspace=0.28,
+    )
 
     # ========================================================
     # Colorbar común
     # ========================================================
 
-    # Reservamos un eje independiente para la colorbar
+    # Cogemos exactamente la posición del segundo mapa
+    pos = ax2.get_position()
+
     cax = fig.add_axes([
-        0.92,   # posición horizontal
-        0.18,   # posición vertical
-        0.015,  # ancho
-        0.64    # alto
+        pos.x1 + 0.018,
+        pos.y0,
+        0.015,
+        pos.height,
     ])
 
     cbar = fig.colorbar(
         im,
-        cax=cax
+        cax=cax,
     )
 
     cbar.set_label(
         label_cbar,
-        fontsize=14,
-        labelpad=10
+        fontsize=FS_COLORBAR,
+        labelpad=12,
     )
 
     cbar.ax.tick_params(
-        labelsize=11
-    )
-
-    # ========================================================
-    # Espaciado
-    # ========================================================
-
-    plt.subplots_adjust(
-        left=0.08,
-        right=0.90,
-        bottom=0.15,
-        top=0.90,
-        wspace=0.28
+        labelsize=FS_COLORBAR_TICKS
     )
 
     # ========================================================
@@ -714,8 +1032,11 @@ def comparar_mapas(
             f"[plot] Guardado: {save_path}"
         )
 
-    plt.show()
+    # ========================================================
+    # Mostrar
+    # ========================================================
 
+    plt.show()
 
 # ============================================================
 # CARGAR MAPAS CHI2
@@ -775,7 +1096,6 @@ deltaN_map, _ = cargar_fits(
 chi2_map, _ = cargar_fits(
     path_chi2
 )
-
 
 # ============================================================
 # CARGAR MAPAS DEL DIAGRAMA ROTACIONAL
@@ -995,7 +1315,7 @@ plot_mapa(
     titulo=f"{MOLECULA} - T_fit - {REGION}",
     label_cbar=r"$T_{\rm ex}$ [K]",
     cmap="inferno",
-    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_T_fit.png",
+    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_T_fit.pdf",
 )
 
 plot_mapa(
@@ -1005,7 +1325,7 @@ plot_mapa(
     label_cbar=r"$\log_{10}(N_{\rm col}\,[{\rm cm}^{-2}])$",
     cmap="viridis",
     log=True,
-    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_logN_fit.png",
+    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_logN_fit.pdf",
 )
 
 plot_mapa(
@@ -1018,7 +1338,7 @@ plot_mapa(
     cmap="magma",
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_deltaT.png"
+        / f"{MOLECULA}_{REGION}_deltaT.pdf"
     ),
 )
 
@@ -1035,7 +1355,7 @@ plot_mapa(
     log=True,
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_log_deltaN.png"
+        / f"{MOLECULA}_{REGION}_log_deltaN.pdf"
     ),
 )
 
@@ -1050,7 +1370,7 @@ plot_mapa(
     cmap="cividis",
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_chi2_min.png"
+        / f"{MOLECULA}_{REGION}_chi2_min.pdf"
     ),
 )
 
@@ -1065,7 +1385,7 @@ plot_mapa(
     cmap="plasma",
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_frac_deltaT.png"
+        / f"{MOLECULA}_{REGION}_frac_deltaT.pdf"
     ),
 )
 
@@ -1080,7 +1400,7 @@ plot_mapa(
     cmap="plasma",
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_frac_deltaN.png"
+        / f"{MOLECULA}_{REGION}_frac_deltaN.pdf"
     ),
 )
 
@@ -1095,7 +1415,7 @@ plot_mapa(
     titulo=f"{MOLECULA} - T_ex rotational diagram - {REGION}",
     label_cbar=r"$T_{\rm ex}$ [K]",
     cmap="inferno",
-    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_Tex_diagrot.png",
+    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_Tex_diagrot.pdf",
 )
 
 
@@ -1106,7 +1426,7 @@ plot_mapa(
     label_cbar=r"$\log_{10}(N_{\rm col}\,[{\rm cm}^{-2}])$",
     cmap="viridis",
     log=True,
-    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_logN_diagrot.png",
+    save_path=OUT_DIR / f"{MOLECULA}_{REGION}_logN_diagrot.pdf",
 )
 
 # ============================================================
@@ -1116,17 +1436,18 @@ plot_mapa(
 if T_fit_map.shape == T_diagrot_map.shape:
 
     comparar_mapas(
-    T_fit_map,
     T_diagrot_map,
-    header,
+    T_fit_map,
     header_diagrot,
-    titulo1=r"$\chi^2$ fit",
-    titulo2="Rotational diagram",
+    header,
+    titulo1="Rotational diagram",
+    titulo2=r"$\chi^2$ fit",
+    panel_label=r"a) $T_{\rm ex}$ [K]",
     label_cbar=r"$T_{\rm ex}$ [K]",
     cmap="inferno",
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_comparison_Tex.png"
+        / f"{MOLECULA}_{REGION}_comparison_Tex.pdf"
     ),
 )
 
@@ -1141,12 +1462,15 @@ else:
 if N_fit_map.shape == N_diagrot_map.shape:
 
     comparar_mapas(
-    N_fit_map,
     N_diagrot_map,
-    header,
+    N_fit_map,
     header_diagrot,
-    titulo1=r"$\chi^2$ fit",
-    titulo2="Rotational diagram",
+    header,
+    titulo1="Rotational diagram",
+    titulo2=r"$\chi^2$ fit",
+    panel_label=(
+        r"b) $N_{\rm col}$ [cm$^{-2}$]"
+    ),
     label_cbar=(
         r"$\log_{10}(N_{\rm col}\,[{\rm cm}^{-2}])$"
     ),
@@ -1154,7 +1478,7 @@ if N_fit_map.shape == N_diagrot_map.shape:
     log=True,
     save_path=(
         OUT_DIR
-        / f"{MOLECULA}_{REGION}_comparison_Ncol.png"
+        / f"{MOLECULA}_{REGION}_comparison_Ncol.pdf"
     ),
 )
 

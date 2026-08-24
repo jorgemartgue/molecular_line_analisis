@@ -333,15 +333,144 @@ for region, resultados_region in dict_Ncol.items():
 #     for region, resultados_region in dict_Ncol.items()
 # }
 
+# ============================================================
+# Estilo común de las figuras
+# ============================================================
 
+# Patrones distintos para cada región.
+# Se combinan con los colores para que la figura siga siendo
+# interpretable en escala de grises y por personas daltónicas.
+
+
+def etiqueta_molecula(molecula):
+    """
+    Convierte los nombres internos de las moléculas en etiquetas
+    con notación química adecuada para las figuras.
+    """
+
+    etiquetas = {
+
+        'Acetona':
+            r'$\mathrm{(CH_3)_2CO}$',
+
+        'C-13-H3CN':
+            r'$\mathrm{^{13}CH_3CN}$',
+
+        'C-13-H3OH':
+            r'$\mathrm{^{13}CH_3OH}$',
+
+        'C2H5CN':
+            r'$\mathrm{C_2H_5CN}$',
+
+        'C2H5OH_anti':
+            r'$\mathrm{a\!-\!C_2H_5OH}$',
+
+        'C2H5OH_g':
+            r'$\mathrm{g\!-\!C_2H_5OH}$',
+
+        'CH3CCH_v0':
+            r'$\mathrm{CH_3CCH}\;(v=0)$',
+
+        'CH3CHO_v0':
+            r'$\mathrm{CH_3CHO}\;(v=0)$',
+
+        'CH3CN':
+            r'$\mathrm{CH_3CN}$',
+
+        'CH3NCO':
+            r'$\mathrm{CH_3NCO}$',
+
+        'CH3NCO_B3':
+            r'$\mathrm{CH_3NCO}\;(\mathrm{B3})$',
+
+        'CH3O-18-H':
+            r'$\mathrm{CH_3^{18}OH}$',
+
+        'CH3OCH3':
+            r'$\mathrm{CH_3OCH_3}$',
+
+        'CH3OCHO_v0':
+            r'$\mathrm{CH_3OCHO}\;(v=0)$',
+
+        'CH3OCHO_v1':
+            r'$\mathrm{CH_3OCHO}\;(v=1)$',
+
+        'CH3OH_v0':
+            r'$\mathrm{CH_3OH}\;(v=0)$',
+
+        'CH3OH_v1':
+            r'$\mathrm{CH_3OH}\;(v=1)$',
+
+        'OC-13-S':
+            r'$\mathrm{O^{13}CS}$',
+    }
+
+    return etiquetas.get(molecula, molecula)
+
+FS_TITULO = 38
+FS_YLABEL = 35
+FS_XTICKS = 28
+FS_YTICKS = 28
+FS_LEGEND = 31
+
+ESPACIO_MOLECULAS = 1.40
+
+
+REGIONES_IRS2 = [
+    'MF2',
+    'MM14',
+    'MM24',
+    'MM31',
+    'MM35',
+    'NORTH',
+]
+
+REGIONES_E = [
+    'e2e',
+    'e2w',
+    'e8mm',
+]
+
+HATCH_POR_REGION = {
+    'MF2': '',
+    'MM14': '//',
+    'MM24': '\\\\',
+    'MM31': 'xx',
+    'MM35': '..',
+    'NORTH': '+',
+    'e2e': '//',
+    'e2w': '..',
+    'e8mm': 'xx',
+}
+
+COLOR_POR_REGION = {
+    'MF2':   '#9B7ED1',  # morado medio
+    'MM14':  '#F4A261',  # naranja suave
+    'MM24':  '#74C69D',  # verde medio
+    'MM31':  '#E76F6F',  # rojo/salmón
+    'MM35':  '#6EC5D8',  # cyan con más cuerpo
+    'NORTH': '#A9826E',  # marrón suave
+
+    'e2e':   'tab:blue',
+    'e2w':   'tab:orange',
+    'e8mm':  'tab:green',
+}
+
+ESPACIO_MOLECULAS = 1.6
+
+# ============================================================
+# Parámetros geométricos comunes
+# ============================================================
+
+ESPACIO_MOLECULAS = 2
+ANCHO_BARRA = 0.2
+SEPARACION_BARRAS = 0.2
 
 
 def plot_logN_por_region(dict_Ncol):
     """
-    Representa log10(N_fit / cm^-2) con barras de error.
+    Representa log10(N_fit / cm^-2), separando IRS2 y W51-E.
     """
-
-    regiones = list(dict_Ncol.keys())
 
     moleculas = sorted({
         molecula
@@ -349,114 +478,183 @@ def plot_logN_por_region(dict_Ncol):
         for molecula in resultados_region
     })
 
-    x = np.arange(len(moleculas))
+    x = np.arange(len(moleculas)) * ESPACIO_MOLECULAS
 
-    n_regiones = len(regiones)
-    ancho = 0.8 / n_regiones
+    fig, axes = plt.subplots(
+    2,
+    1,
+    figsize=(30, 14),
+    sharex=True,
+    sharey=True,
+    gridspec_kw={
+        'height_ratios': [1, 0.80],
+        'hspace': 0.035,
+    }
+)
 
-    fig, ax = plt.subplots(
-        figsize=(max(11, len(moleculas) * 0.85), 6.5)
-    )
+    grupos = [
+        ('W51 IRS2', REGIONES_IRS2),
+        ('W51-E', REGIONES_E),
+    ]
 
-    for i, region in enumerate(regiones):
+    for ax, (nombre_grupo, regiones) in zip(axes, grupos):
 
-        valores = []
-        errores = []
+        n_regiones = len(regiones)
 
-        for molecula in moleculas:
+        if n_regiones == 6:
+            ancho = 0.28
+            separacion = 0.3
+        else:
+            ancho = 0.34
+            separacion = 0.36
 
-            resultado = dict_Ncol[region].get(molecula)
+        for i, region in enumerate(regiones):
 
-            if resultado is None:
-                valores.append(np.nan)
-                errores.append(np.nan)
-                continue
+            valores = []
+            errores = []
 
-            N_col = resultado['valor']
-            error_N_col = resultado['error']
+            for molecula in moleculas:
 
-            if np.isfinite(N_col) and N_col > 0:
+                resultado = dict_Ncol.get(
+                    region, {}
+                ).get(molecula)
 
-                valores.append(
-                    np.log10(N_col)
-                )
+                if resultado is None:
+                    valores.append(np.nan)
+                    errores.append(np.nan)
+                    continue
 
-                if np.isfinite(error_N_col):
+                N_col = resultado['valor']
+                error_N_col = resultado['error']
 
-                    error_logN = (
-                        error_N_col
-                        / (N_col * np.log(10))
+                if np.isfinite(N_col) and N_col > 0:
+
+                    valores.append(
+                        np.log10(N_col)
                     )
 
+                    if np.isfinite(error_N_col):
+
+                        error_logN = (
+                            error_N_col
+                            / (N_col * np.log(10))
+                        )
+
+                    else:
+                        error_logN = np.nan
+
+                    errores.append(error_logN)
+
                 else:
-                    error_logN = np.nan
+                    valores.append(np.nan)
+                    errores.append(np.nan)
 
-                errores.append(error_logN)
+            desplazamiento = (
+                i - (n_regiones - 1) / 2
+            ) * separacion
 
-            else:
+            ax.bar(
+                x + desplazamiento,
+                valores,
+                width=ancho,
+                color=COLOR_POR_REGION[region],
+                hatch=HATCH_POR_REGION[region],
+                edgecolor='black',
+                linewidth=1.1,
+                yerr=errores,
+                capsize=5,
+                label=region,
+                error_kw={
+                    'elinewidth': 1.8,
+                    'capthick': 1.8,
+                    'ecolor': 'black',
+                    'alpha': 1.0,
+                    },
+                )   
 
-                valores.append(np.nan)
-                errores.append(np.nan)
+        # Separadores verticales entre moléculas
+        for j in range(len(x) - 1):
 
-        desplazamiento = (
-            i - (n_regiones - 1) / 2
-        ) * ancho
+            ax.axvline(
+                (x[j] + x[j + 1]) / 2,
+                color='0.82',
+                linewidth=0.8,
+                zorder=0,
+            )
 
-        ax.bar(
-            x + desplazamiento,
-            valores,
-            width=ancho,
-            yerr=errores,
-            capsize=4,
-            error_kw={
-                'elinewidth': 1.2,
-                'capthick': 1.2,
-                'ecolor': 'black',
-                'alpha': 0.9,
-            },
-            label=region,
+        ax.set_ylim(13, 19.3)
+
+        ax.tick_params(
+            axis='y',
+            labelsize=FS_YTICKS
         )
 
-    ax.set_ylim(13, 19)
+        ax.grid(
+            axis='y',
+            alpha=0.25
+        )
 
-    ax.set_xticks(x)
+        ax.text(
+            0.015,
+            0.96,
+            nombre_grupo,
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=FS_TITULO - 4,
+            fontweight='bold',
+        )
 
-    ax.set_xticklabels(
-        moleculas,
-        rotation=45,
-        ha='right',
-        fontsize=15
+        ax.legend(
+            loc='upper center',
+            bbox_to_anchor=(0.5, 0.93),
+            ncol=n_regiones,
+            fontsize=FS_LEGEND,
+            frameon=False,
+            columnspacing=1.5,
+            handlelength=2.0,
+        )
+
+        ax.set_xlim(
+            x[0] - 1.0,
+            x[-1] + 1.0
+        )
+
+    axes[0].text(
+        0.5,
+        0.995,
+        'a) Column densities',
+        transform=axes[0].transAxes,
+        ha='center',
+        va='top',
+        fontsize=FS_TITULO,
+        fontweight='bold',
     )
 
-    ax.set_ylabel(
-        r'$\log_{10}\left(N_{\mathrm{mol}}\,[\mathrm{cm}^{-2}]\right)$',
-        fontsize=18
+    fig.supylabel(
+        r'$\log_{10}\left('
+        r'N_{\mathrm{mol}}\,[\mathrm{cm}^{-2}]'
+        r'\right)$',
+        fontsize=FS_YLABEL,
+        x=0.025
     )
 
-    ax.set_xlabel(
-        'Molecule',
-        fontsize=18
-    )
+    axes[-1].set_xticks(x)
 
-    ax.tick_params(
-        axis='y',
-        labelsize=14
-    )
+    axes[-1].tick_params(
+        axis='x',
+        which='both',
+        bottom=False,
+        labelbottom=False
+        )
 
-    ax.legend(
-        title='Region',
-        loc='upper right',
-        fontsize=10,
-        title_fontsize=15,
-        frameon=True
-    )
-
-    ax.grid(
-        axis='y',
-        alpha=0.3
-    )
-
-    fig.tight_layout()
+    fig.subplots_adjust(
+        left=0.085,
+        right=0.995,
+        bottom=0.16,
+        top=0.995,
+        hspace=0.035,
+        )
 
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
@@ -465,117 +663,182 @@ def plot_logN_por_region(dict_Ncol):
     )
 
     plt.show()
-                
-    
+
+
 plot_logN_por_region(dict_Ncol)
+                
 
 def plot_logN_CH3OH_por_region(dict_logNcol):
     """
-    Representa log10[N(CH3OH)/N(mol)] con barras de error.
+    Representa log10[N(CH3OH)/N(mol)], separando IRS2 y W51-E.
     """
-
-    regiones = list(dict_logNcol.keys())
 
     moleculas = sorted({
         molecula
         for resultados_region in dict_logNcol.values()
         for molecula in resultados_region
-        if molecula != "CH3OH_v0"
+        if molecula != 'CH3OH_v0'
     })
 
-    x = np.arange(len(moleculas))
+    x = np.arange(len(moleculas)) * ESPACIO_MOLECULAS
 
-    n_regiones = len(regiones)
-    ancho = 0.8 / n_regiones
+    fig, axes = plt.subplots(
+    2,
+    1,
+    figsize=(30, 14),
+    sharex=True,
+    sharey=True,
+    gridspec_kw={
+        'height_ratios': [1, 0.80],
+        'hspace': 0.035,
+    }
+)
 
-    fig, ax = plt.subplots(
-        figsize=(max(11, len(moleculas) * 0.85), 6.5)
-    )
+    grupos = [
+        ('W51 IRS2', REGIONES_IRS2),
+        ('W51-E', REGIONES_E),
+    ]
 
-    for i, region in enumerate(regiones):
+    for ax, (nombre_grupo, regiones) in zip(axes, grupos):
 
-        valores = []
-        errores = []
+        n_regiones = len(regiones)
 
-        for molecula in moleculas:
+        if n_regiones == 6:
+            ancho = 0.28
+            separacion = 0.3
+        else:
+            ancho = 0.34
+            separacion = 0.36
 
-            resultado = dict_logNcol[region].get(molecula)
+        for i, region in enumerate(regiones):
 
-            if resultado is None:
-                valores.append(np.nan)
-                errores.append(np.nan)
-                continue
+            valores = []
+            errores = []
 
-            valores.append(
-                resultado['valor']
+            for molecula in moleculas:
+
+                resultado = dict_logNcol.get(
+                    region, {}
+                ).get(molecula)
+
+                if resultado is None:
+                    valores.append(np.nan)
+                    errores.append(np.nan)
+                    continue
+
+                valores.append(
+                    resultado['valor']
+                )
+
+                errores.append(
+                    resultado['error']
+                )
+
+            desplazamiento = (
+                i - (n_regiones - 1) / 2
+            ) * separacion
+
+            ax.bar(
+                x + desplazamiento,
+                valores,
+                width=ancho,
+                color=COLOR_POR_REGION[region],
+                hatch=HATCH_POR_REGION[region],
+                edgecolor='black',
+                linewidth=1.1,
+                yerr=errores,
+                capsize=5,
+                label=region,
+                error_kw={
+                    'elinewidth': 1.8,
+                    'capthick': 1.8,
+                    'ecolor': 'black',
+                    'alpha': 1.0,
+                    },
+                )
+
+        for j in range(len(x) - 1):
+
+            ax.axvline(
+                (x[j] + x[j + 1]) / 2,
+                color='0.82',
+                linewidth=0.8,
+                zorder=0,
             )
 
-            errores.append(
-                resultado['error']
-            )
+        ax.set_ylim(-1, 4.3)
 
-        desplazamiento = (
-            i - (n_regiones - 1) / 2
-        ) * ancho
-
-        ax.bar(
-            x + desplazamiento,
-            valores,
-            width=ancho,
-            yerr=errores,
-            capsize=4,
-            error_kw={
-                'elinewidth': 1.2,
-                'capthick': 1.2,
-                'ecolor': 'black',
-                'alpha': 0.9,
-            },
-            label=region,
+        ax.tick_params(
+            axis='y',
+            labelsize=FS_YTICKS
         )
 
-    ax.set_ylim(-1, 4)
+        ax.grid(
+            axis='y',
+            alpha=0.25
+        )
 
-    ax.set_xticks(x)
+        ax.text(
+            0.015,
+            0.96,
+            nombre_grupo,
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=FS_TITULO - 4,
+            fontweight='bold',
+        )
 
-    ax.set_xticklabels(
-        moleculas,
-        rotation=45,
-        ha='right',
-        fontsize=15
+        ax.legend(
+            loc='upper center',
+            bbox_to_anchor=(0.5, 0.93),
+            ncol=n_regiones,
+            fontsize=FS_LEGEND,
+            frameon=False,
+            columnspacing=1.5,
+            handlelength=2.0,
+        )
+
+        ax.set_xlim(
+            x[0] - 1.0,
+            x[-1] + 1.0
+        )
+
+    axes[0].text(
+        0.5,
+        0.995,
+        r'c) $\mathbf{N}(\mathbf{CH}_{3}\mathbf{OH})/'
+        r'\mathbf{N}(\mathbf{species})$',
+        transform=axes[0].transAxes,
+        ha='center',
+        va='top',
+        fontsize=FS_TITULO,
     )
 
-    ax.set_ylabel(
+    fig.supylabel(
         r'$\log_{10}\left('
         r'N(\mathrm{CH_3OH}\,v=0)'
         r'/N_{\mathrm{mol}}'
         r'\right)$',
-        fontsize=18
+        fontsize=FS_YLABEL,
+        x=0.025
     )
 
-    ax.set_xlabel(
-        'Molecule',
-        fontsize=18
-    )
+    axes[-1].set_xticks(x)
 
-    ax.tick_params(
-        axis='y',
-        labelsize=14
-    )
-
-    ax.legend(
-        title='Region',
-        loc='best',
-        fontsize=10,
-        title_fontsize=15,
-        frameon=True
-    )
-
-    ax.grid(
-        axis='y',
-        alpha=0.3
-    )
-
-    fig.tight_layout()
+    axes[-1].set_xticklabels(
+        [etiqueta_molecula(m) for m in moleculas],
+        rotation=45,
+        ha='right',
+        fontsize=FS_XTICKS
+        )
+    fig.subplots_adjust(
+        left=0.085,
+        right=0.995,
+        bottom=0.16,
+        top=0.995,
+        hspace=0.035,
+        )
 
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
@@ -585,14 +848,13 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
 
     plt.show()
 
+
 plot_logN_CH3OH_por_region(dict_logN_col)
 
 def plot_Tex_por_region(dict_Tex):
     """
-    Representa T_ex con barras de error.
+    Representa T_ex separando IRS2 y W51-E.
     """
-
-    regiones = list(dict_Tex.keys())
 
     moleculas = sorted({
         molecula
@@ -600,94 +862,162 @@ def plot_Tex_por_region(dict_Tex):
         for molecula in resultados_region
     })
 
-    x = np.arange(len(moleculas))
+    x = np.arange(len(moleculas)) * ESPACIO_MOLECULAS
 
-    n_regiones = len(regiones)
-    ancho = 0.8 / n_regiones
+    fig, axes = plt.subplots(
+    2,
+    1,
+    figsize=(30, 14),
+    sharex=True,
+    sharey=True,
+    gridspec_kw={
+        'height_ratios': [1, 0.80],
+        'hspace': 0.035,
+    }
+)
+    grupos = [
+        ('W51 IRS2', REGIONES_IRS2),
+        ('W51-E', REGIONES_E),
+    ]
 
-    fig, ax = plt.subplots(
-        figsize=(max(11, len(moleculas) * 0.85), 6.5)
-    )
+    for ax, (nombre_grupo, regiones) in zip(axes, grupos):
 
-    for i, region in enumerate(regiones):
+        n_regiones = len(regiones)
 
-        valores = []
-        errores = []
+        if n_regiones == 6:
+            ancho = 0.28
+            separacion = 0.3
+        else:
+            ancho = 0.34
+            separacion = 0.36
 
-        for molecula in moleculas:
+        for i, region in enumerate(regiones):
 
-            resultado = dict_Tex[region].get(molecula)
+            valores = []
+            errores = []
 
-            if resultado is None:
-                valores.append(np.nan)
-                errores.append(np.nan)
-                continue
+            for molecula in moleculas:
 
-            valores.append(
-                resultado['valor']
+                resultado = dict_Tex.get(
+                    region, {}
+                ).get(molecula)
+
+                if resultado is None:
+                    valores.append(np.nan)
+                    errores.append(np.nan)
+                    continue
+
+                valores.append(
+                    resultado['valor']
+                )
+
+                errores.append(
+                    resultado['error']
+                )
+
+            desplazamiento = (
+                i - (n_regiones - 1) / 2
+            ) * separacion
+
+            ax.bar(
+                x + desplazamiento,
+                valores,
+                width=ancho,
+                color=COLOR_POR_REGION[region],
+                hatch=HATCH_POR_REGION[region],
+                edgecolor='black',
+                linewidth=1.1,
+                yerr=errores,
+                capsize=5,
+                label=region,
+                error_kw={
+                    'elinewidth': 1.8,
+                    'capthick': 1.8,
+                    'ecolor': 'black',
+                    'alpha': 1.0,
+                    },
+                )  
+
+        for j in range(len(x) - 1):
+
+            ax.axvline(
+                (x[j] + x[j + 1]) / 2,
+                color='0.82',
+                linewidth=0.8,
+                zorder=0,
             )
 
-            errores.append(
-                resultado['error']
-            )
+        ax.set_ylim(-80, 650)
 
-        desplazamiento = (
-            i - (n_regiones - 1) / 2
-        ) * ancho
-
-        ax.bar(
-            x + desplazamiento,
-            valores,
-            width=ancho,
-            yerr=errores,
-            capsize=4,
-            error_kw={
-                'elinewidth': 1.2,
-                'capthick': 1.2,
-                'ecolor': 'black',
-                'alpha': 0.9,
-            },
-            label=region,
+        ax.tick_params(
+            axis='y',
+            labelsize=FS_YTICKS
         )
 
-    ax.set_xticks(x)
+        ax.grid(
+            axis='y',
+            alpha=0.25
+        )
 
-    ax.set_xticklabels(
-        moleculas,
-        rotation=45,
-        ha='right',
-        fontsize=15
+        ax.text(
+            0.015,
+            0.96,
+            nombre_grupo,
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=FS_TITULO - 4,
+            fontweight='bold',
+        )
+
+        ax.legend(
+            loc='upper left',
+            bbox_to_anchor=(0.015, 0.88),
+            ncol=2,
+            fontsize=FS_LEGEND,
+            frameon=False,
+            columnspacing=1.4,
+            handlelength=2.0,
+        )
+
+        ax.set_xlim(
+            x[0] - 1.0,
+            x[-1] + 1.0
+        )
+
+    axes[0].text(
+        0.5,
+        0.995,
+        'b) Excitation temperatures',
+        transform=axes[0].transAxes,
+        ha='center',
+        va='top',
+        fontsize=FS_TITULO,
+        fontweight='bold',
     )
 
-    ax.set_ylabel(
+    fig.supylabel(
         r'$T_{\mathrm{ex}}$ [K]',
-        fontsize=18
+        fontsize=FS_YLABEL,
+        x=0.025
     )
 
-    ax.set_xlabel(
-        'Molecule',
-        fontsize=18
-    )
+    axes[-1].set_xticks(x)
 
-    ax.tick_params(
-        axis='y',
-        labelsize=15
-    )
+    axes[-1].tick_params(
+        axis='x',
+        which='both',
+        bottom=False,
+        labelbottom=False
+        )
 
-    ax.legend(
-        title='Region',
-        loc='upper right',
-        fontsize=10,
-        title_fontsize=15,
-        frameon=True
-    )
-
-    ax.grid(
-        axis='y',
-        alpha=0.3
-    )
-
-    fig.tight_layout()
+    fig.subplots_adjust(
+        left=0.085,
+        right=0.995,
+        bottom=0.16,
+        top=0.995,
+        hspace=0.035,
+        )
 
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
@@ -697,5 +1027,7 @@ def plot_Tex_por_region(dict_Tex):
 
     plt.show()
 
+
 plot_Tex_por_region(dict_Tex)
+
 
