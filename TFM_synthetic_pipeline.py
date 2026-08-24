@@ -426,7 +426,10 @@ def calcular_modelo_sintetico_molecula(
         tab_lineas_mol=tab_lineas_mol,
         show_plots=show_plots,
         rutacarp_region= rutacarp_region,
-        rutaregion_region= rutaregion_region
+        rutaregion_region= rutaregion_region,
+        save_plots=save_plots,
+        save_dir=save_dir,
+        plot_prefix=plot_prefix,
     )
 
     else:
@@ -586,7 +589,7 @@ def calcular_modelo_sintetico(
         plot_lineas=False,
         show_plots=True,
         save_plots=True,
-        guardar_solo_final=False,
+        guardar_solo_final=True,
         v_pik_dict=None,
         dict_sigma=None,
         nsigma_lineas=1.0,

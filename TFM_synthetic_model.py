@@ -601,15 +601,33 @@ def spec_sint_class(T_ex, N_col, molecula, intervalo1, id_splat1, filtro_estruct
 
     return tab_lineas, modelo, tab_lineas_plot, residuos
 
-def spec_sint_opacidad(T_ex, N_col, molecula, intervalo1, id_splat1, 
-                       filtro_estructuras1,
-                       anch_lin, Tcont, vpic, name_mol, cat_mol, id_cat,
-                       sijmu2=0*u.D**2, aij=0/u.s, modeloin=None,
-                       dict_espec=None, plot_lineas=False, tab_lineas_mol=None,
-                       show_plots=True, dict_sigma=None,
-                       nsigma_lineas=1.0,
-                       rutacarp_region=None,
-                       rutaregion_region=None):
+def spec_sint_opacidad(
+        T_ex,
+        N_col,
+        molecula,
+        intervalo1,
+        id_splat1,
+        filtro_estructuras1,
+        anch_lin,
+        Tcont,
+        vpic,
+        name_mol,
+        cat_mol,
+        id_cat,
+        sijmu2=0 * u.D**2,
+        aij=0 / u.s,
+        modeloin=None,
+        dict_espec=None,
+        plot_lineas=False,
+        tab_lineas_mol=None,
+        show_plots=True,
+        save_plots=False,
+        save_dir=None,
+        plot_prefix=None,
+        dict_sigma=None,
+        nsigma_lineas=1.0,
+        rutacarp_region=None,
+        rutaregion_region=None):
     """
     Parameters
     ----------
@@ -675,6 +693,50 @@ def spec_sint_opacidad(T_ex, N_col, molecula, intervalo1, id_splat1,
         Generates plots of the different spectral windows, showing both the
         observed spectrum and the synthetic spectrum.
     """
+    generar_plots = show_plots or save_plots
+
+    if save_plots:
+        if save_dir is None:
+            raise ValueError(
+                "Si save_plots=True, debes proporcionar save_dir."
+            )
+
+        save_dir = Path(save_dir)
+        save_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+    if plot_prefix is None:
+        plot_prefix = name_mol
+    
+    def _safe_name(text):
+        text = str(text)
+
+        for caracter in [
+                " ", "/", "\\", ":", ";", ",",
+                "(", ")", "[", "]",
+        ]:
+            text = text.replace(caracter, "_")
+
+        return text
+
+    def _save_current_fig(filename):
+        if not save_plots:
+            return
+
+        ruta_figura = save_dir / filename
+
+        plt.savefig(
+            ruta_figura,
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+        print(
+            f"[spec_sint] Figura guardada en: "
+            f"{ruta_figura}"
+        )
     QT = Q(T_ex, cat_mol, id_cat, plot = False)
 
     sigma_v = anch_lin.cgs / (2*np.sqrt(2*np.log(2)))
@@ -883,12 +945,12 @@ def spec_sint_opacidad(T_ex, N_col, molecula, intervalo1, id_splat1,
         
         #Representación
         
-        if show_plots and plot_lineas:
+        if generar_plots and plot_lineas:
             
             for f0 in tab_lineas_plot[name_mol]['freq']:
                 
-                mask_linea = (f0 - 20 * u.MHz < frec_vent) & (f0
-                                                    + 20 * u.MHz > frec_vent)
+                mask_linea = (f0 - 25 * u.MHz < frec_vent) & (f0
+                                                    + 25 * u.MHz > frec_vent)
                 
                 frec_line = frec_vent[mask_linea]
                 line_med = espec_vent[mask_linea]
@@ -915,10 +977,26 @@ def spec_sint_opacidad(T_ex, N_col, molecula, intervalo1, id_splat1,
                 
                 plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
                            borderaxespad=0)
+                frecuencia_nombre = (
+                    u.Quantity(f0).to_value(u.MHz)
+                )                
+
+                filename = (
+                    f"{_safe_name(plot_prefix)}_"
+                    f"{_safe_name(name_window)}_"
+                    f"{frecuencia_nombre:.1f}_"
+                    "line_opacidad.pdf"
+                )
+
+                _save_current_fig(filename)
+
+                if show_plots:
+                    plt.show()
+
+                plt.close()
                 
-                plt.show()
             
-        elif show_plots:
+        elif generar_plots:
             
             if name_window == 'B6-SPW7':
                 
@@ -971,7 +1049,19 @@ def spec_sint_opacidad(T_ex, N_col, molecula, intervalo1, id_splat1,
                     plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
                                borderaxespad=0)
                     
-                    plt.show()
+                    filename = (
+                        f"{_safe_name(plot_prefix)}_"
+                        f"{_safe_name(name_window)}_"
+                        f"{int(xmin)}_{int(xmax)}_"
+                        "model_opacidad.pdf"
+                    )
+
+                    _save_current_fig(filename)
+
+                    if show_plots:
+                        plt.show()
+
+                    plt.close()
                     
             else:
                 
@@ -1006,7 +1096,18 @@ def spec_sint_opacidad(T_ex, N_col, molecula, intervalo1, id_splat1,
                 plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
                            borderaxespad=0)
                 
-                plt.show()
+                filename = (
+                    f"{_safe_name(plot_prefix)}_"
+                    f"{_safe_name(name_window)}_"
+                    "model_opacidad.pdf"
+                )
+
+                _save_current_fig(filename)
+
+                if show_plots:
+                    plt.show()
+
+                plt.close()
 
     tab_lineas['tau'] = tau_col
     tab_lineas['Descripcion'] = descrp_trans

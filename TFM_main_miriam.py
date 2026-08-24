@@ -1189,7 +1189,7 @@ def procesar_molecula(MOLECULA):
     # AJUSTE CHI2 - UNA MOLÉCULA
     # ============================================================
 
-    RECALCULAR_CHI2 = True
+    RECALCULAR_CHI2 = False
 
     print("\n" + "=" * 70)
     print(f"[chi2] Ajuste de molécula: {MOLECULA}")
@@ -1439,7 +1439,7 @@ def procesar_molecula(MOLECULA):
             )
 
         modelo_completo_chi2_opacidad = calcular_modelo_sintetico(
-            moleculas=MOLECULAS_MODELO_CHI2,
+            moleculas=MOLECULA,
             region_name=REGION,
             tab_mol_config=tab_mol_config,
             resultados_parametros=resultados_chi2_modelo,
@@ -1451,7 +1451,7 @@ def procesar_molecula(MOLECULA):
             plot_lineas=True,
             show_plots=MOSTRAR_PLOTS,
             save_plots=True,
-            guardar_solo_final=False,
+            guardar_solo_final=True,
             v_pik_dict=v_pik_dict,
             dict_sigma=dict_sigma_vent,
             nsigma_lineas=3.0,
