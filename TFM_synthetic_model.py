@@ -963,20 +963,43 @@ def spec_sint_opacidad(
                 
                 plt.plot([],[], ' ', label = fr'{name_window} // {name_mol}')
                 
-                plt.plot(frec_line, line_med, 'b', drawstyle='steps-mid',
-                         label = 'espectro observado')
-                plt.plot(frec_line, model_line, 'r', drawstyle='steps-mid',
-                         label = 'espectro sintético')
+                frec_line_GHz = frec_line.to_value(u.GHz)
+
+                plt.plot(
+                    frec_line_GHz,
+                    line_med.to_value(u.K),
+                    "b",
+                    drawstyle="steps-mid",
+                    label="Espectro observado",
+                )
+
+                plt.plot(
+                    frec_line_GHz,
+                    model_line.to_value(u.K),
+                    "r",
+                    drawstyle="steps-mid",
+                    label="Espectro sintético",
+                )
                 
                 plt.plot([], [], ' ', label=fr'T_ex = {T_ex.value:.1f} K')
                 plt.plot([], [], ' ', 
                          label=fr'N_col = {N_col.value:.2e} 1/cm²')
                 
-                plt.xlabel('Frecuencia (MHz)')
-                plt.ylabel('Temperatura de brillo (K)')
-                
-                plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
-                           borderaxespad=0)
+                plt.xlabel("Frecuencia (GHz)")
+                plt.ylabel("Temperatura de brillo (K)")
+
+                plt.ticklabel_format(
+                    axis="x",
+                    style="plain",
+                    useOffset=False,
+                )
+
+                plt.legend(
+                    loc="upper left",
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize = 9
+                )
                 frecuencia_nombre = (
                     u.Quantity(f0).to_value(u.MHz)
                 )                
