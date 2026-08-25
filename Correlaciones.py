@@ -547,7 +547,23 @@ for archivo_region in regiones_compactas[
             f"{molecula:20s}: "
             f"{len(N):5d} píxeles"
         )
-        
+
+    
+# ============================================================
+# COLORES DE LAS REGIONES COMPACTAS
+# ============================================================
+
+nombres_compactas = list(
+    datos_regiones.keys()
+)
+
+cmap = plt.get_cmap("tab10")
+
+colores_compactas = {
+    nombre: cmap(i)
+    for i, nombre in enumerate(nombres_compactas)
+}
+
 # ============================================================
 # AJUSTE LINEAL
 # ============================================================
@@ -820,14 +836,8 @@ def extraer_pixeles_exteriores_molecula(
 
     d = datos[molecula]
 
-    mascara_compactas = (
-        mascaras_compactas_totales[
-            molecula
-        ]
-    )
-
     mascara_exterior = (
-        ~mascara_compactas
+        ~mascaras_compactas_totales[molecula]
         & np.isfinite(d["T"])
         & np.isfinite(d["N"])
         & np.isfinite(d["deltaT"])
@@ -846,192 +856,345 @@ def extraer_pixeles_exteriores_molecula(
         mascara_exterior
     ]
 
+    deltaT = d["deltaT"][
+        mascara_exterior
+    ]
+
+    deltaN = d["deltaN"][
+        mascara_exterior
+    ]
+
+    logN = np.log10(
+        N
+    )
+
+    delta_logN = (
+        deltaN
+        / (
+            N
+            * np.log(10.0)
+        )
+    )
+
     return {
         "T": T,
-        "logN": np.log10(N),
+        "logN": logN,
+        "deltaT": deltaT,
+        "delta_logN": delta_logN,
         "npix": len(N),
     }
 
 # ============================================================
-# FIGURA Tex vs log(Ncol)
+# EXTRAER TODOS LOS HOT CORES PARA UNA MOLÉCULA
+# ============================================================
+
+def extraer_todos_hotcores_molecula(
+    molecula,
+):
+    """
+    Extrae conjuntamente todos los píxeles pertenecientes
+    a cualquiera de las regiones compactas.
+    """
+
+    d = datos[molecula]
+
+    mascara = (
+        mascaras_compactas_totales[molecula]
+        & np.isfinite(d["T"])
+        & np.isfinite(d["N"])
+        & np.isfinite(d["deltaT"])
+        & np.isfinite(d["deltaN"])
+        & (d["T"] > 0)
+        & (d["N"] > 0)
+        & (d["deltaT"] >= 0)
+        & (d["deltaN"] >= 0)
+    )
+
+    T = d["T"][
+        mascara
+    ]
+
+    N = d["N"][
+        mascara
+    ]
+
+    deltaT = d["deltaT"][
+        mascara
+    ]
+
+    deltaN = d["deltaN"][
+        mascara
+    ]
+
+    return {
+        "x": np.log10(N),
+        "y": T,
+        "sx": (
+            deltaN
+            / (
+                N
+                * np.log(10.0)
+            )
+        ),
+        "sy": deltaT,
+        "npix": len(N),
+    }
+
+# ============================================================
+# FIGURA Tex vs log(Ncol) - REGIÓN EXTENSA
 # ============================================================
 
 def plot_tex_vs_logn(
-    nombre_region,
     molecula,
-    datos_mol,
     ruta_salida,
 ):
     """
-    Representa Tex frente a log10(Ncol) para todos
-    los píxeles válidos de una región compacta.
+    Figura única para toda la región extensa.
+
+    - Cada región compacta aparece en un color distinto.
+    - Los píxeles exteriores aparecen en gris.
+    - Se ajusta cada región compacta por separado.
+    - Se realiza además un ajuste conjunto de todos
+      los hot cores.
     """
 
-    x = datos_mol[
-        "logN"
-    ]
-
-    y = datos_mol[
-        "T"
-    ]
-
-    sx = datos_mol[
-        "delta_logN"
-    ]
-
-    sy = datos_mol[
-        "deltaT"
-    ]
-
-    resultado = ajustar_lineal(
-        x,
-        y,
-        sx,
-        sy,
+    exterior = (
+        extraer_pixeles_exteriores_molecula(
+            molecula
         )
-    exterior = extraer_pixeles_exteriores_molecula(molecula)
+    )
 
-    if resultado is None:
-        print(
-            f"[aviso] {nombre_region} - "
-            f"{molecula}: no hay suficientes "
-            "píxeles para realizar el ajuste."
+    todos_cores = (
+        extraer_todos_hotcores_molecula(
+            molecula
         )
-        return None
-
-    # ----------------------------------------
-    # Figura
-    # ----------------------------------------
+    )
 
     fig, ax = plt.subplots(
-        figsize=(8, 7)
+        figsize=(9, 7.5)
     )
 
-    # Píxeles fuera de todas las regiones compactas
-    ax.scatter(
-        exterior["logN"],
-        exterior["T"],
-        s=22,
-        alpha=0.30,
-        color="0.65",
-        edgecolors="none",
-        label="Outside compact regions",
-        zorder=1,
+    # ========================================================
+    # PÍXELES EXTERIORES
+    # ========================================================
+
+    if exterior["npix"] > 0:
+
+        ax.errorbar(
+            exterior["logN"],
+            exterior["T"],
+            xerr=exterior["delta_logN"],
+            yerr=exterior["deltaT"],
+            fmt="o",
+            markersize=3.5,
+            alpha=0.20,
+            color="0.65",
+            ecolor="0.75",
+            elinewidth=0.6,
+            capsize=0,
+            label="Outside compact regions",
+            zorder=1,
         )
 
-    # Píxeles de la región compacta
-    ax.scatter(
-        resultado["x"],
-        resultado["y"],
-        s=32,
-        alpha=0.75,
-        color="tab:blue",
-        edgecolors="none",
-        label=nombre_region,
-        zorder=3,
+    # ========================================================
+    # AJUSTES INDIVIDUALES
+    # ========================================================
+
+    resultados_individuales = {}
+
+    lineas_stats = []
+
+    for nombre_region in nombres_compactas:
+
+        datos_mol = datos_regiones[
+            nombre_region
+        ][
+            molecula
+        ]
+
+        x = datos_mol["logN"]
+        y = datos_mol["T"]
+
+        sx = datos_mol["delta_logN"]
+        sy = datos_mol["deltaT"]
+
+        color = colores_compactas[
+            nombre_region
+        ]
+
+        # ----------------------------------------
+        # Puntos + barras de error
+        # ----------------------------------------
+
+        ax.errorbar(
+            x,
+            y,
+            xerr=sx,
+            yerr=sy,
+            fmt="o",
+            markersize=5,
+            alpha=0.75,
+            color=color,
+            ecolor=color,
+            elinewidth=0.8,
+            capsize=0,
+            label=nombre_region,
+            zorder=3,
         )
 
-    # ----------------------------------------
-    # Ajuste
-    # ----------------------------------------
+        # ----------------------------------------
+        # Ajuste individual
+        # ----------------------------------------
 
-    xmin = np.min(
-        resultado["x"]
-    )
-
-    xmax = np.max(
-        resultado["x"]
-    )
-
-    margen = (
-        0.04
-        * (
-            xmax
-            - xmin
+        resultado = ajustar_lineal(
+            x,
+            y,
+            sx,
+            sy,
         )
+
+        resultados_individuales[
+            nombre_region
+        ] = resultado
+
+        if resultado is None:
+            continue
+
+        xmin = np.min(
+            resultado["x"]
+        )
+
+        xmax = np.max(
+            resultado["x"]
+        )
+
+        x_modelo = np.linspace(
+            xmin,
+            xmax,
+            300,
+        )
+
+        y_modelo = (
+            resultado["slope"]
+            * x_modelo
+            + resultado["intercept"]
+        )
+
+        ax.plot(
+            x_modelo,
+            y_modelo,
+            color=color,
+            linewidth=2.2,
+            zorder=4,
+        )
+
+        lineas_stats.append(
+            f"{nombre_region}: "
+            f"N={resultado['npix']}, "
+            f"r={resultado['pearson']:.2f}, "
+            f"rho={resultado['spearman']:.2f}, "
+            f"m={resultado['slope']:.2f}"
+            f"+/-{resultado['slope_err']:.2f}, "
+            f"R2={resultado['r2']:.2f}"
+        )
+
+    # ========================================================
+    # AJUSTE CONJUNTO DE TODOS LOS HOT CORES
+    # ========================================================
+
+    resultado_total = ajustar_lineal(
+        todos_cores["x"],
+        todos_cores["y"],
+        todos_cores["sx"],
+        todos_cores["sy"],
     )
 
-    if margen == 0:
-        margen = 0.05
+    if (
+        resultado_total is not None
+        and len(nombres_compactas) > 1
+    ):
 
-    x_modelo = np.linspace(
-        xmin - margen,
-        xmax + margen,
-        300,
-    )
+        xmin = np.min(
+            resultado_total["x"]
+        )
 
-    y_modelo, sigma_modelo = banda_lineal(
-    x_modelo,
-    resultado["slope"],
-    resultado["intercept"],
-    resultado["cov_beta"],
-    )
+        xmax = np.max(
+            resultado_total["x"]
+        )
 
-    ax.plot(
-        x_modelo,
-        y_modelo,
-        linewidth=2.5,
-        label="Linear fit",
-        zorder=4,
-    )
+        x_modelo = np.linspace(
+            xmin,
+            xmax,
+            300,
+        )
 
-    ax.fill_between(
-        x_modelo,
-        y_modelo - sigma_modelo,
-        y_modelo + sigma_modelo,
-        alpha=0.18,
-        zorder=2,
-    )
+        y_modelo, sigma_modelo = (
+            banda_lineal(
+                x_modelo,
+                resultado_total["slope"],
+                resultado_total["intercept"],
+                resultado_total["cov_beta"],
+            )
+        )
 
-    # ----------------------------------------
-    # Caja de estadísticas
-    # ----------------------------------------
+        ax.plot(
+            x_modelo,
+            y_modelo,
+            color="black",
+            linestyle="--",
+            linewidth=2.8,
+            label="All hot cores fit",
+            zorder=6,
+        )
 
-    texto = (
-        rf"$N_{{\rm pix}}$ = "
-        f"{resultado['npix']}\n\n"
+        ax.fill_between(
+            x_modelo,
+            y_modelo - sigma_modelo,
+            y_modelo + sigma_modelo,
+            color="black",
+            alpha=0.08,
+            zorder=2,
+        )
 
-        rf"Pearson = "
-        f"{resultado['pearson']:.3f}\n"
+        lineas_stats.append(
+            "All cores: "
+            f"N={resultado_total['npix']}, "
+            f"r={resultado_total['pearson']:.2f}, "
+            f"rho={resultado_total['spearman']:.2f}, "
+            f"m={resultado_total['slope']:.2f}"
+            f"+/-{resultado_total['slope_err']:.2f}, "
+            f"R2={resultado_total['r2']:.2f}"
+        )
 
-        rf"Spearman = "
-        f"{resultado['spearman']:.3f}\n\n"
+    # ========================================================
+    # ESTADÍSTICAS
+    # ========================================================
 
-        rf"Slope = "
-        f"{resultado['slope']:.3f}"
-        rf" $\pm$ "
-        f"{resultado['slope_err']:.3f}\n"
+    if lineas_stats:
 
-        rf"Intercept = "
-        f"{resultado['intercept']:.3f}"
-        rf" $\pm$ "
-        f"{resultado['intercept_err']:.3f}\n\n"
+        texto = "\n".join(
+            lineas_stats
+        )
 
-        rf"$\sigma_{{\rm res}}$ = "
-        f"{resultado['sigma_res']:.3f} K\n\n"
+        ax.text(
+            0.02,
+            0.98,
+            texto,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=9.5,
+            bbox=dict(
+                boxstyle="square,pad=0.45",
+                facecolor="white",
+                alpha=0.88,
+            ),
+            zorder=10,
+        )
 
-        rf"$R^2$ = "
-        f"{resultado['r2']:.3f}"
-    )
-
-    ax.text(
-        0.03,
-        0.97,
-        texto,
-        transform=ax.transAxes,
-        ha="left",
-        va="top",
-        fontsize=12,
-        bbox=dict(
-            boxstyle="square,pad=0.5",
-            facecolor="white",
-            alpha=0.9,
-        ),
-    )
-
-    # ----------------------------------------
-    # Ejes
-    # ----------------------------------------
+    # ========================================================
+    # EJES
+    # ========================================================
 
     ax.set_xlabel(
         r"$\log_{10}"
@@ -1047,7 +1210,7 @@ def plot_tex_vs_logn(
     )
 
     ax.set_title(
-        f"{nombre_region}: {molecula}",
+        f"{REGION}: {molecula}",
         fontsize=17,
     )
 
@@ -1057,8 +1220,9 @@ def plot_tex_vs_logn(
     )
 
     ax.legend(
-        loc="lower right",
-        fontsize=11,
+        loc="best",
+        fontsize=14,
+        markerscale = 1.2
     )
 
     ax.grid(
@@ -1067,9 +1231,9 @@ def plot_tex_vs_logn(
 
     fig.tight_layout()
 
-    # ----------------------------------------
-    # Guardar
-    # ----------------------------------------
+    # ========================================================
+    # GUARDAR
+    # ========================================================
 
     ruta_salida.mkdir(
         parents=True,
@@ -1085,7 +1249,7 @@ def plot_tex_vs_logn(
         ruta_pdf,
         bbox_inches="tight",
     )
-    
+
     plt.show()
 
     plt.close(fig)
@@ -1094,7 +1258,10 @@ def plot_tex_vs_logn(
         f"[guardado] {ruta_pdf}"
     )
 
-    return resultado
+    return {
+        "individuales": resultados_individuales,
+        "todos_cores": resultado_total,
+    }
 
 # ============================================================
 # GENERAR TODAS LAS FIGURAS Tex vs log(Ncol)
@@ -1102,52 +1269,24 @@ def plot_tex_vs_logn(
 
 resultados_tex_logn = {}
 
-
-print(
-    "\n"
-    + "=" * 70
+ruta_salida = (
+    ruta_salida_base
+    / REGION
+    / "Tex_vs_Ncol"
 )
 
-print(
-    "GENERANDO Tex vs log(Ncol)"
-)
-
-print(
-    "=" * 70
-)
-
-
-for nombre_region, datos_region in datos_regiones.items():
+for molecula in moleculas:
 
     print(
-        f"\n>>> {nombre_region}"
-    )
-
-    ruta_salida = (
-        ruta_salida_base
-        / REGION
-        / nombre_region
-        / "Tex_vs_Ncol"
+        f"\n>>> {molecula}"
     )
 
     resultados_tex_logn[
-        nombre_region
-    ] = {}
-
-    for molecula, datos_mol in datos_region.items():
-
-        resultado = plot_tex_vs_logn(
-            nombre_region,
-            molecula,
-            datos_mol,
-            ruta_salida,
-        )
-
-        resultados_tex_logn[
-            nombre_region
-        ][
-            molecula
-        ] = resultado
+        molecula
+    ] = plot_tex_vs_logn(
+        molecula,
+        ruta_salida,
+    )
 
 # ============================================================
 # COMPROBAR COMPATIBILIDAD WCS
@@ -1212,7 +1351,7 @@ def wcs_compatibles(
     return True
 
 # ============================================================
-# EXTRAER PÍXELES COMUNES ENTRE DOS MOLÉCULAS
+# EXTRAER PÍXELES DE UNA REGIÓN COMPACTA ENTRE DOS MOLÉCULAS
 # ============================================================
 
 def extraer_pareja_molecular(
@@ -1221,18 +1360,12 @@ def extraer_pareja_molecular(
     mol2,
 ):
     """
-    Extrae únicamente los píxeles válidos y comunes
-    entre dos moléculas dentro de una región compacta.
-
-    Devuelve logN1, logN2 y sus incertidumbres.
+    Extrae los píxeles comunes entre dos moléculas
+    dentro de una región compacta concreta.
     """
 
     d1 = datos[mol1]
     d2 = datos[mol2]
-
-    # ----------------------------------------
-    # Comprobar WCS
-    # ----------------------------------------
 
     if not wcs_compatibles(
         d1,
@@ -1240,14 +1373,10 @@ def extraer_pareja_molecular(
     ):
         print(
             f"[aviso] {mol1} vs {mol2}: "
-            "los mapas no tienen la misma "
-            "rejilla WCS. Se omite."
+            "los mapas no tienen la misma rejilla WCS."
         )
-
         return None
 
-    # Máscaras ya calculadas para esta
-    # región compacta
     mask1 = datos_regiones[
         nombre_region
     ][
@@ -1264,32 +1393,27 @@ def extraer_pareja_molecular(
         "mask"
     ]
 
-    # ----------------------------------------
-    # Intersección espacial
-    # ----------------------------------------
-
-    mask_comun = (
+    mascara_comun = (
         mask1
         & mask2
     )
 
     N1 = d1["N"][
-        mask_comun
+        mascara_comun
     ]
 
     N2 = d2["N"][
-        mask_comun
+        mascara_comun
     ]
 
     dN1 = d1["deltaN"][
-        mask_comun
+        mascara_comun
     ]
 
     dN2 = d2["deltaN"][
-        mask_comun
+        mascara_comun
     ]
 
-    # Protección adicional
     validos = (
         np.isfinite(N1)
         & np.isfinite(N2)
@@ -1307,44 +1431,31 @@ def extraer_pareja_molecular(
     dN1 = dN1[validos]
     dN2 = dN2[validos]
 
-    # ----------------------------------------
-    # Logaritmos
-    # ----------------------------------------
-
-    logN1 = np.log10(
-        N1
-    )
-
-    logN2 = np.log10(
-        N2
-    )
-
-    dlogN1 = (
-        dN1
-        / (
-            N1
-            * np.log(10.0)
-        )
-    )
-
-    dlogN2 = (
-        dN2
-        / (
-            N2
-            * np.log(10.0)
-        )
-    )
-
     return {
-        "x": logN1,
-        "y": logN2,
-        "sx": dlogN1,
-        "sy": dlogN2,
-        "npix": len(logN1),
+        "x": np.log10(N1),
+        "y": np.log10(N2),
+
+        "sx": (
+            dN1
+            / (
+                N1
+                * np.log(10.0)
+            )
+        ),
+
+        "sy": (
+            dN2
+            / (
+                N2
+                * np.log(10.0)
+            )
+        ),
+
+        "npix": len(N1),
     }
 
 # ============================================================
-# EXTRAER PÍXELES EXTERIORES COMUNES ENTRE DOS MOLÉCULAS
+# EXTRAER PÍXELES COMUNES ENTRE DOS MOLÉCULAS
 # ============================================================
 
 def extraer_pareja_exterior(
@@ -1365,14 +1476,11 @@ def extraer_pareja_exterior(
     ):
         return None
 
-    # Fuera de todas las regiones compactas
-    # para ambas moléculas
     mascara_exterior = (
         ~mascaras_compactas_totales[mol1]
         & ~mascaras_compactas_totales[mol2]
     )
 
-    # Píxeles válidos en ambas moléculas
     mascara_valida = (
         mascara_exterior
         & np.isfinite(d1["N"])
@@ -1393,230 +1501,382 @@ def extraer_pareja_exterior(
         mascara_valida
     ]
 
+    dN1 = d1["deltaN"][
+        mascara_valida
+    ]
+
+    dN2 = d2["deltaN"][
+        mascara_valida
+    ]
+
     return {
         "x": np.log10(N1),
         "y": np.log10(N2),
+
+        "sx": (
+            dN1
+            / (
+                N1
+                * np.log(10.0)
+            )
+        ),
+
+        "sy": (
+            dN2
+            / (
+                N2
+                * np.log(10.0)
+            )
+        ),
+
         "npix": len(N1),
     }
 
 # ============================================================
-# FIGURA log(Nmol1) vs log(Nmol2)
+# Hot cores por molecula 
+# ============================================================
+
+def extraer_pareja_todos_hotcores(
+    mol1,
+    mol2,
+):
+    """
+    Extrae conjuntamente todos los píxeles pertenecientes
+    a regiones compactas y válidos para ambas moléculas.
+    """
+
+    d1 = datos[mol1]
+    d2 = datos[mol2]
+
+    if not wcs_compatibles(
+        d1,
+        d2,
+    ):
+        return None
+
+    mascara_cores = (
+        mascaras_compactas_totales[mol1]
+        & mascaras_compactas_totales[mol2]
+    )
+
+    mascara_valida = (
+        mascara_cores
+        & np.isfinite(d1["N"])
+        & np.isfinite(d2["N"])
+        & np.isfinite(d1["deltaN"])
+        & np.isfinite(d2["deltaN"])
+        & (d1["N"] > 0)
+        & (d2["N"] > 0)
+        & (d1["deltaN"] > 0)
+        & (d2["deltaN"] > 0)
+    )
+
+    N1 = d1["N"][
+        mascara_valida
+    ]
+
+    N2 = d2["N"][
+        mascara_valida
+    ]
+
+    dN1 = d1["deltaN"][
+        mascara_valida
+    ]
+
+    dN2 = d2["deltaN"][
+        mascara_valida
+    ]
+
+    return {
+        "x": np.log10(N1),
+        "y": np.log10(N2),
+
+        "sx": (
+            dN1
+            / (
+                N1
+                * np.log(10.0)
+            )
+        ),
+
+        "sy": (
+            dN2
+            / (
+                N2
+                * np.log(10.0)
+            )
+        ),
+
+        "npix": len(N1),
+    }
+
+
+
+
+
+# ============================================================
+# FIGURA log(Nmol1) vs log(Nmol2) - REGIÓN EXTENSA
 # ============================================================
 
 def plot_ncol_vs_ncol(
-    nombre_region,
     mol1,
     mol2,
     ruta_salida,
 ):
     """
-    Representa log10(Nmol2) frente a log10(Nmol1)
-    para los píxeles comunes de una región compacta.
+    Figura única para toda la región extensa.
+
+    Cada región compacta:
+        - color diferente
+        - barras de error
+        - ajuste lineal independiente
+
+    Además:
+        - píxeles exteriores en gris
+        - ajuste conjunto de todos los hot cores
     """
 
-    pareja = extraer_pareja_molecular(
-        nombre_region,
-        mol1,
-        mol2,
-    )
     exterior = extraer_pareja_exterior(
         mol1,
         mol2,
-        )   
-
-    if pareja is None:
-        return None
-
-    if pareja["npix"] < 3:
-
-        print(
-            f"[aviso] {nombre_region}: "
-            f"{mol1} vs {mol2}: "
-            "menos de 3 píxeles comunes."
-        )
-
-        return None
-
-    # ----------------------------------------
-    # ODR
-    # ----------------------------------------
-
-    resultado = ajustar_lineal(
-        pareja["x"],
-        pareja["y"],
-        pareja["sx"],
-        pareja["sy"],
-        )
-
-    if resultado is None:
-        return None
-
-    # ----------------------------------------
-    # Figura
-    # ----------------------------------------
-
-    fig, ax = plt.subplots(
-        figsize=(8, 7)
     )
 
-    # ----------------------------------------
-    # Píxeles exteriores
-    # ----------------------------------------
+    todos_cores = extraer_pareja_todos_hotcores(
+        mol1,
+        mol2,
+    )
 
-    if exterior is not None:
+    if todos_cores is None:
+        return None
 
-        ax.scatter(
+    fig, ax = plt.subplots(
+        figsize=(9, 7.5)
+    )
+
+    # ========================================================
+    # EXTERIOR
+    # ========================================================
+
+    if (
+        exterior is not None
+        and exterior["npix"] > 0
+    ):
+
+        ax.errorbar(
             exterior["x"],
             exterior["y"],
-            s=22,
-            alpha=0.30,
+            xerr=exterior["sx"],
+            yerr=exterior["sy"],
+            fmt="o",
+            markersize=3.5,
+            alpha=0.20,
             color="0.65",
-            edgecolors="none",
+            ecolor="0.75",
+            elinewidth=0.6,
+            capsize=0,
             label="Outside compact regions",
             zorder=1,
         )
 
+    # ========================================================
+    # REGIONES INDIVIDUALES
+    # ========================================================
 
-    # ----------------------------------------
-    # Región compacta
-    # ----------------------------------------
+    resultados_individuales = {}
 
-    ax.scatter(
-        resultado["x"],
-        resultado["y"],
-        s=32,
-        alpha=0.75,
-        color="tab:blue",
-        edgecolors="none",
-        label=nombre_region,
-        zorder=3,
-    )
+    lineas_stats = []
 
-    # ----------------------------------------
-    # Límites generales
-    # ----------------------------------------
+    for nombre_region in nombres_compactas:
 
-    xmin = np.min(
-        resultado["x"]
-    )
-
-    xmax = np.max(
-        resultado["x"]
-    )
-
-    ymin = np.min(
-        resultado["y"]
-    )
-
-    ymax = np.max(
-        resultado["y"]
-    )
-
-    rango_x = xmax - xmin
-    rango_y = ymax - ymin
-
-    margen_x = (
-        0.05 * rango_x
-        if rango_x > 0
-        else 0.05
-    )
-
-    margen_y = (
-        0.05 * rango_y
-        if rango_y > 0
-        else 0.05
-    )
-
-    # ----------------------------------------
-    # Recta ODR
-    # ----------------------------------------
-
-    x_modelo = np.linspace(
-        xmin - margen_x,
-        xmax + margen_x,
-        300,
-    )
-
-    y_modelo, sigma_modelo = banda_lineal(
-        x_modelo,
-        resultado["slope"],
-        resultado["intercept"],
-        resultado["cov_beta"],
+        pareja = extraer_pareja_molecular(
+            nombre_region,
+            mol1,
+            mol2,
         )
 
-    ax.plot(
-        x_modelo,
-        y_modelo,
-        linewidth=2.5,
-        label="Linear fit",
-        zorder=5,
+        if (
+            pareja is None
+            or pareja["npix"] == 0
+        ):
+            continue
+
+        color = colores_compactas[
+            nombre_region
+        ]
+
+        # ----------------------------------------
+        # Puntos + errores
+        # ----------------------------------------
+
+        ax.errorbar(
+            pareja["x"],
+            pareja["y"],
+            xerr=pareja["sx"],
+            yerr=pareja["sy"],
+            fmt="o",
+            markersize=5,
+            alpha=0.75,
+            color=color,
+            ecolor=color,
+            elinewidth=0.8,
+            capsize=0,
+            label=nombre_region,
+            zorder=3,
+        )
+
+        # ----------------------------------------
+        # Ajuste individual
+        # ----------------------------------------
+
+        resultado = ajustar_lineal(
+            pareja["x"],
+            pareja["y"],
+            pareja["sx"],
+            pareja["sy"],
+        )
+
+        resultados_individuales[
+            nombre_region
+        ] = resultado
+
+        if resultado is None:
+            continue
+
+        xmin = np.min(
+            resultado["x"]
+        )
+
+        xmax = np.max(
+            resultado["x"]
+        )
+
+        x_modelo = np.linspace(
+            xmin,
+            xmax,
+            300,
+        )
+
+        y_modelo = (
+            resultado["slope"]
+            * x_modelo
+            + resultado["intercept"]
+        )
+
+        ax.plot(
+            x_modelo,
+            y_modelo,
+            color=color,
+            linewidth=2.2,
+            zorder=5,
+        )
+
+        lineas_stats.append(
+            f"{nombre_region}: "
+            f"N={resultado['npix']}, "
+            f"r={resultado['pearson']:.2f}, "
+            f"rho={resultado['spearman']:.2f}, "
+            f"m={resultado['slope']:.2f}"
+            f"+/-{resultado['slope_err']:.2f}, "
+            f"R2={resultado['r2']:.2f}"
+        )
+
+    # ========================================================
+    # AJUSTE DE TODOS LOS HOT CORES
+    # ========================================================
+
+    resultado_total = ajustar_lineal(
+        todos_cores["x"],
+        todos_cores["y"],
+        todos_cores["sx"],
+        todos_cores["sy"],
     )
 
-    # Banda 1 sigma
-    ax.fill_between(
-        x_modelo,
-        y_modelo - sigma_modelo,
-        y_modelo + sigma_modelo,
-        alpha=0.18,
-        zorder=2,
-    )
+    if (
+        resultado_total is not None
+        and len(nombres_compactas) > 1
+    ):
 
-    # ----------------------------------------
-    # Estadísticas
-    # ----------------------------------------
+        xmin = np.min(
+            resultado_total["x"]
+        )
 
-    texto = (
-        rf"$N_{{\rm pix}}$ = "
-        f"{resultado['npix']}\n\n"
+        xmax = np.max(
+            resultado_total["x"]
+        )
 
-        rf"Pearson $r$ = "
-        f"{resultado['pearson']:.3f}\n"
+        x_modelo = np.linspace(
+            xmin,
+            xmax,
+            300,
+        )
 
-        rf"Spearman $\rho$ = "
-        f"{resultado['spearman']:.3f}\n\n"
+        y_modelo, sigma_modelo = (
+            banda_lineal(
+                x_modelo,
+                resultado_total["slope"],
+                resultado_total["intercept"],
+                resultado_total["cov_beta"],
+            )
+        )
 
-        rf"Slope = "
-        f"{resultado['slope']:.3f}"
-        rf" $\pm$ "
-        f"{resultado['slope_err']:.3f}\n"
+        ax.plot(
+            x_modelo,
+            y_modelo,
+            color="black",
+            linestyle="--",
+            linewidth=2.8,
+            label="All hot cores fit",
+            zorder=7,
+        )
 
-        rf"Intercept = "
-        f"{resultado['intercept']:.3f}"
-        rf" $\pm$ "
-        f"{resultado['intercept_err']:.3f}\n\n"
+        ax.fill_between(
+            x_modelo,
+            y_modelo - sigma_modelo,
+            y_modelo + sigma_modelo,
+            color="black",
+            alpha=0.08,
+            zorder=2,
+        )
 
-        rf"$\sigma_{{\rm res}}$ = "
-        f"{resultado['sigma_res']:.3f} dex\n"
+        lineas_stats.append(
+            "All cores: "
+            f"N={resultado_total['npix']}, "
+            f"r={resultado_total['pearson']:.2f}, "
+            f"rho={resultado_total['spearman']:.2f}, "
+            f"m={resultado_total['slope']:.2f}"
+            f"+/-{resultado_total['slope_err']:.2f}, "
+            f"R2={resultado_total['r2']:.2f}"
+        )
 
-        rf"$\sigma_{{\rm meas}}$ = "
-        f"{resultado['sigma_meas']:.3f} dex\n"
+    # ========================================================
+    # ESTADÍSTICAS
+    # ========================================================
 
-        rf"$\sigma_{{\rm int}}$ = "
-        f"{resultado['sigma_int']:.3f} dex\n\n"
+    if lineas_stats:
 
-        rf"$R^2$ = "
-        f"{resultado['r2']:.3f}"
-    )
+        texto = "\n".join(
+            lineas_stats
+        )
 
-    ax.text(
-        0.03,
-        0.97,
-        texto,
-        transform=ax.transAxes,
-        ha="left",
-        va="top",
-        fontsize=11.5,
-        bbox=dict(
-            boxstyle="square,pad=0.5",
-            facecolor="white",
-            alpha=0.9,
-        ),
-        zorder=10,
-    )
-
-    # ----------------------------------------
-    # Labels
-    # ----------------------------------------
+        ax.text(
+            0.02,
+            0.98,
+            texto,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=12.5,
+            linespacing=1.25,
+            bbox=dict(
+                boxstyle="square,pad=0.55",
+                facecolor="white",
+                alpha=0.90,
+                ),
+            zorder=10,
+            )
+    # ========================================================
+    # EJES
+    # ========================================================
 
     ax.set_xlabel(
         rf"$\log_{{10}}"
@@ -1633,8 +1893,7 @@ def plot_ncol_vs_ncol(
     )
 
     ax.set_title(
-        f"{nombre_region}: "
-        f"{mol1} vs {mol2}",
+        f"{REGION}: {mol1} vs {mol2}",
         fontsize=16,
     )
 
@@ -1644,8 +1903,9 @@ def plot_ncol_vs_ncol(
     )
 
     ax.legend(
-        loc="lower right",
-        fontsize=11,
+        loc="best",
+        fontsize=14,
+        markerscale = 1.2
     )
 
     ax.grid(
@@ -1654,9 +1914,9 @@ def plot_ncol_vs_ncol(
 
     fig.tight_layout()
 
-    # ----------------------------------------
-    # Guardar
-    # ----------------------------------------
+    # ========================================================
+    # GUARDAR
+    # ========================================================
 
     ruta_salida.mkdir(
         parents=True,
@@ -1681,7 +1941,10 @@ def plot_ncol_vs_ncol(
         f"[guardado] {ruta_pdf}"
     )
 
-    return resultado
+    return {
+        "individuales": resultados_individuales,
+        "todos_cores": resultado_total,
+    }
 
 # ============================================================
 # GENERAR TODAS LAS COMPARACIONES Ncol vs Ncol
@@ -1689,58 +1952,25 @@ def plot_ncol_vs_ncol(
 
 resultados_ncol_ncol = {}
 
-
-print(
-    "\n"
-    + "=" * 70
+ruta_salida = (
+    ruta_salida_base
+    / REGION
+    / "Ncol_vs_Ncol"
 )
 
-print(
-    "GENERANDO log(Nmol1) vs log(Nmol2)"
-)
-
-print(
-    "=" * 70
-)
-
-
-for nombre_region in datos_regiones:
+for mol1, mol2 in combinations(
+    moleculas,
+    2,
+):
 
     print(
-        f"\n>>> {nombre_region}"
-    )
-
-    ruta_salida = (
-        ruta_salida_base
-        / REGION
-        / nombre_region
-        / "Ncol_vs_Ncol"
+        f"\n>>> {mol1} vs {mol2}"
     )
 
     resultados_ncol_ncol[
-        nombre_region
-    ] = {}
-
-    # Todas las parejas únicas
-    for mol1, mol2 in combinations(
-        moleculas,
-        2,
-    ):
-
-        print(
-            f"    {mol1} "
-            f"vs {mol2}"
-        )
-
-        resultado = plot_ncol_vs_ncol(
-            nombre_region,
-            mol1,
-            mol2,
-            ruta_salida,
-        )
-
-        resultados_ncol_ncol[
-            nombre_region
-        ][
-            (mol1, mol2)
-        ] = resultado
+        (mol1, mol2)
+    ] = plot_ncol_vs_ncol(
+        mol1,
+        mol2,
+        ruta_salida,
+    )
