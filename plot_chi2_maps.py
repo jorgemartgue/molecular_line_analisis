@@ -16,8 +16,8 @@ import astropy.units as u
 # CONFIGURACIÓN
 # ============================================================
 
-REGION = "E_NORTH"
-MOLECULA = "CH3CN"
+REGION = "MM14_MAP"
+MOLECULA = "C2H5OH_anti"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v_t=0$"
 # MOLECULA_LABEL = r"$\mathrm{anti-C_2H_5OH}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
@@ -96,14 +96,22 @@ CHI2_DIR = (
 REGIONES_COMPACTAS = {
     "mm31_d2": [
         ("d2", REGIONES_DIR / "regionMF2.reg"),
-        ("MM31", REGIONES_DIR / "regionMM31.reg"),
+        ("mm31", REGIONES_DIR / "regionMM31.reg"),
     ],
 
-    "E_NORTH": [
+    "NORTH_MAP": [
         ("NORTH", REGIONES_DIR / "regionNORTH.reg"),
-        ("MM35", REGIONES_DIR / "regionMM35.reg"),
-        ("MM24", REGIONES_DIR / "regionMM24.reg"),
+        ("mm35", REGIONES_DIR / "regionMM35.reg"),
+        ("mm24", REGIONES_DIR / "regionMM24.reg"),
     ],
+    "MM14_MAP": [
+        ("mm14", REGIONES_DIR / "regionMM14.reg")
+        ],
+    
+    "E_NORTH":[
+        ("e2e", REGIONES_DIR / "regione2e.reg"),
+        ("e2w", REGIONES_DIR / "regione2w.reg")
+        ]
 }
 
 
