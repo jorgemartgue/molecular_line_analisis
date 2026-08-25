@@ -416,16 +416,16 @@ FS_LEGEND = 31
 ESPACIO_MOLECULAS = 1.40
 
 
-REGIONES_IRS2 = [
+REGIONES_PANEL_1 = [
     'MF2',
     'MM14',
     'MM24',
     'MM31',
     'MM35',
-    'NORTH',
 ]
 
-REGIONES_E = [
+REGIONES_PANEL_2 = [
+    'NORTH',
     'e2e',
     'e2w',
     'e8mm',
@@ -487,26 +487,25 @@ def plot_logN_por_region(dict_Ncol):
     sharex=True,
     sharey=True,
     gridspec_kw={
-        'height_ratios': [1, 0.80],
-        'hspace': 0.035,
-    }
-)
+    'height_ratios': [1, 1],
+    'hspace': 0.035,
+})
 
     grupos = [
-        ('W51 IRS2', REGIONES_IRS2),
-        ('W51-E', REGIONES_E),
-    ]
+        ('', REGIONES_PANEL_1),
+        ('', REGIONES_PANEL_2),
+        ]
 
     for ax, (nombre_grupo, regiones) in zip(axes, grupos):
 
         n_regiones = len(regiones)
 
-        if n_regiones == 6:
-            ancho = 0.28
-            separacion = 0.3
+        if n_regiones == 5:
+            ancho = 0.30
+            separacion = 0.32
         else:
-            ancho = 0.34
-            separacion = 0.36
+            ancho = 0.32
+            separacion = 0.34
 
         for i, region in enumerate(regiones):
 
@@ -594,17 +593,6 @@ def plot_logN_por_region(dict_Ncol):
             alpha=0.25
         )
 
-        ax.text(
-            0.015,
-            0.96,
-            nombre_grupo,
-            transform=ax.transAxes,
-            ha='left',
-            va='top',
-            fontsize=FS_TITULO - 4,
-            fontweight='bold',
-        )
-
         ax.legend(
             loc='upper center',
             bbox_to_anchor=(0.5, 0.93),
@@ -648,18 +636,33 @@ def plot_logN_por_region(dict_Ncol):
         labelbottom=False
         )
 
-    fig.subplots_adjust(
-        left=0.085,
-        right=0.995,
-        bottom=0.16,
-        top=0.995,
-        hspace=0.035,
+    ax_top = axes[0].secondary_xaxis('top')
+
+    ax_top.set_xticks(x)
+
+    ax_top.set_xticklabels(
+        [etiqueta_molecula(m) for m in moleculas],
+        rotation=45,
+        ha='left',
+        fontsize=FS_XTICKS
         )
+
+    ax_top.tick_params(
+        axis='x',
+        pad=8
+        )
+
+    fig.subplots_adjust(
+    left=0.085,
+    right=0.995,
+    bottom=0.16,
+    top=0.84,
+    hspace=0.035,
+)
 
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
         'abundancias_absolutas.pdf',
-        bbox_inches='tight'
     )
 
     plt.show()
@@ -677,8 +680,7 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
         molecula
         for resultados_region in dict_logNcol.values()
         for molecula in resultados_region
-        if molecula != 'CH3OH_v0'
-    })
+        })
 
     x = np.arange(len(moleculas)) * ESPACIO_MOLECULAS
 
@@ -689,26 +691,25 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
     sharex=True,
     sharey=True,
     gridspec_kw={
-        'height_ratios': [1, 0.80],
-        'hspace': 0.035,
-    }
-)
+    'height_ratios': [1, 1],
+    'hspace': 0.035,
+})
 
     grupos = [
-        ('W51 IRS2', REGIONES_IRS2),
-        ('W51-E', REGIONES_E),
-    ]
+        ('', REGIONES_PANEL_1),
+        ('', REGIONES_PANEL_2),
+        ]
 
     for ax, (nombre_grupo, regiones) in zip(axes, grupos):
 
         n_regiones = len(regiones)
 
-        if n_regiones == 6:
-            ancho = 0.28
-            separacion = 0.3
+        if n_regiones == 5:
+            ancho = 0.30
+            separacion = 0.32
         else:
-            ancho = 0.34
-            separacion = 0.36
+            ancho = 0.32
+            separacion = 0.34
 
         for i, region in enumerate(regiones):
 
@@ -716,6 +717,11 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
             errores = []
 
             for molecula in moleculas:
+
+                if molecula == 'CH3OH_v0':
+                    valores.append(np.nan)
+                    errores.append(np.nan)
+                    continue
 
                 resultado = dict_logNcol.get(
                     region, {}
@@ -726,13 +732,8 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
                     errores.append(np.nan)
                     continue
 
-                valores.append(
-                    resultado['valor']
-                )
-
-                errores.append(
-                    resultado['error']
-                )
+                valores.append(resultado['valor'])
+                errores.append(resultado['error'])
 
             desplazamiento = (
                 i - (n_regiones - 1) / 2
@@ -776,17 +777,6 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
         ax.grid(
             axis='y',
             alpha=0.25
-        )
-
-        ax.text(
-            0.015,
-            0.96,
-            nombre_grupo,
-            transform=ax.transAxes,
-            ha='left',
-            va='top',
-            fontsize=FS_TITULO - 4,
-            fontweight='bold',
         )
 
         ax.legend(
@@ -843,7 +833,6 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
         'abundancias_relativas.pdf',
-        bbox_inches='tight'
     )
 
     plt.show()
@@ -871,25 +860,24 @@ def plot_Tex_por_region(dict_Tex):
     sharex=True,
     sharey=True,
     gridspec_kw={
-        'height_ratios': [1, 0.80],
-        'hspace': 0.035,
-    }
-)
+    'height_ratios': [1, 1],
+    'hspace': 0.035,
+})
     grupos = [
-        ('W51 IRS2', REGIONES_IRS2),
-        ('W51-E', REGIONES_E),
-    ]
+        ('', REGIONES_PANEL_1),
+        ('', REGIONES_PANEL_2),
+        ]
 
     for ax, (nombre_grupo, regiones) in zip(axes, grupos):
 
         n_regiones = len(regiones)
 
-        if n_regiones == 6:
-            ancho = 0.28
-            separacion = 0.3
+        if n_regiones == 5:
+            ancho = 0.30
+            separacion = 0.32
         else:
-            ancho = 0.34
-            separacion = 0.36
+            ancho = 0.32
+            separacion = 0.34
 
         for i, region in enumerate(regiones):
 
@@ -959,17 +947,6 @@ def plot_Tex_por_region(dict_Tex):
             alpha=0.25
         )
 
-        ax.text(
-            0.015,
-            0.96,
-            nombre_grupo,
-            transform=ax.transAxes,
-            ha='left',
-            va='top',
-            fontsize=FS_TITULO - 4,
-            fontweight='bold',
-        )
-
         ax.legend(
             loc='upper left',
             bbox_to_anchor=(0.015, 0.88),
@@ -1022,7 +999,6 @@ def plot_Tex_por_region(dict_Tex):
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
         'temperaturas.pdf',
-        bbox_inches='tight'
     )
 
     plt.show()

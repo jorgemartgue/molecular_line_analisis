@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy.wcs.utils import proj_plane_pixel_scales
 
-ruta_fits_chi2 = Path("/home/jorge/TFM/tables/chi2_maps")
+ruta_fits_chi2 = Path("/home/jorge/TFM/maps_21Agosto/maps/chi2")
 
 ruta_regiones = Path("/home/jorge/TFM/regiones")
 
