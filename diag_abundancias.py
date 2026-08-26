@@ -407,6 +407,21 @@ def etiqueta_molecula(molecula):
 
     return etiquetas.get(molecula, molecula)
 
+def etiqueta_region(region):
+    etiquetas = {
+        'MF2': 'd2',
+        'MM14': 'mm14',
+        'MM24': 'mm24',
+        'MM31': 'mm31',
+        'MM35': 'mm35',
+        'NORTH': 'north',
+        'e2e': 'e2e',
+        'e2w': 'e2w',
+        'e8mm': 'e8mm',
+    }
+
+    return etiquetas.get(region, region)
+
 FS_TITULO = 38
 FS_YLABEL = 35
 FS_XTICKS = 28
@@ -562,7 +577,7 @@ def plot_logN_por_region(dict_Ncol):
                 linewidth=1.1,
                 yerr=errores,
                 capsize=5,
-                label=region,
+                label=etiqueta_region(region),
                 error_kw={
                     'elinewidth': 1.8,
                     'capthick': 1.8,
@@ -788,7 +803,7 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
                 linewidth=1.1,
                 yerr=errores,
                 capsize=5,
-                label=region,
+                label=etiqueta_region(region),
                 error_kw={
                     'elinewidth': 1.8,
                     'capthick': 1.8,
@@ -957,7 +972,7 @@ def plot_Tex_por_region(dict_Tex):
                 linewidth=1.1,
                 yerr=errores,
                 capsize=5,
-                label=region,
+                label=etiqueta_region(region),
                 error_kw={
                     'elinewidth': 1.8,
                     'capthick': 1.8,
@@ -1066,6 +1081,10 @@ for region, resultados_region in dict_Ncol.items():
     for molecula, resultado in resultados_region.items():
 
         if molecula == 'CH3OH_v0':
+            dict_ratio_CH3OH[region][molecula] = {
+                'valor': 1.0,
+                'error': 0.0,
+            }
             continue
 
         N_col = resultado['valor']
@@ -1170,7 +1189,7 @@ def plot_ratio_CH3OH_log(dict_ratio):
                 linewidth=1.1,
                 yerr=errores,
                 capsize=5,
-                label=region,
+                label=etiqueta_region(region),
                 error_kw={
                     'elinewidth': 1.8,
                     'capthick': 1.8,

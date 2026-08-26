@@ -4929,7 +4929,7 @@ REGION_LINE_CONFIG = {
             "CH3OH_v0": {
                 "E_max": 820 * u.K,
                 "aij_min": 1e-6 / u.s,
-                "sijmu2_min": 10 * u.D**2,
+                "sijmu2_min": 20 * u.D**2,
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },

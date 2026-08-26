@@ -1189,7 +1189,7 @@ def procesar_molecula(MOLECULA):
     # AJUSTE CHI2 - UNA MOLÉCULA
     # ============================================================
 
-    RECALCULAR_CHI2 = False
+    RECALCULAR_CHI2 = True
 
     print("\n" + "=" * 70)
     print(f"[chi2] Ajuste de molécula: {MOLECULA}")
