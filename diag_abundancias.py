@@ -644,6 +644,7 @@ def plot_logN_por_region(dict_Ncol):
         [etiqueta_molecula(m) for m in moleculas],
         rotation=45,
         ha='left',
+        rotation_mode='anchor',
         fontsize=FS_XTICKS
         )
 
@@ -653,12 +654,12 @@ def plot_logN_por_region(dict_Ncol):
         )
 
     fig.subplots_adjust(
-    left=0.085,
-    right=0.995,
-    bottom=0.16,
-    top=0.84,
-    hspace=0.035,
-)
+        left=0.085,
+        right=0.995,
+        bottom=0.08,
+        top=0.78,
+        hspace=0.035
+        )
 
     fig.savefig(
         '/home/jorge/TFM/figures/diag_abundancias/'
@@ -820,14 +821,15 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
         [etiqueta_molecula(m) for m in moleculas],
         rotation=45,
         ha='right',
+        rotation_mode='anchor',
         fontsize=FS_XTICKS
         )
     fig.subplots_adjust(
         left=0.085,
         right=0.995,
-        bottom=0.16,
-        top=0.995,
-        hspace=0.035,
+        bottom=0.29,
+        top=0.97,
+        hspace=0.035
         )
 
     fig.savefig(
