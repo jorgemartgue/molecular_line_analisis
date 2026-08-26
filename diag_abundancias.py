@@ -582,7 +582,7 @@ def plot_logN_por_region(dict_Ncol):
             )
 
         ax.set_ylim(13, 19.3)
-
+        ax.set_yticks([13, 14, 15, 16, 17, 18, 19])
         ax.tick_params(
             axis='y',
             labelsize=FS_YTICKS
@@ -938,7 +938,9 @@ def plot_Tex_por_region(dict_Tex):
             )
 
         ax.set_ylim(-80, 650)
-
+        ax.set_yticks(
+            [0, 100, 200, 300, 400, 500, 600]
+            )
         ax.tick_params(
             axis='y',
             labelsize=FS_YTICKS
@@ -1009,3 +1011,223 @@ def plot_Tex_por_region(dict_Tex):
 plot_Tex_por_region(dict_Tex)
 
 
+dict_ratio_CH3OH = {}
+
+for region, resultados_region in dict_Ncol.items():
+
+    dict_ratio_CH3OH[region] = {}
+
+    referencia = resultados_region.get('CH3OH_v0')
+
+    if referencia is None:
+        continue
+
+    N_CH3OH = referencia['valor']
+    error_CH3OH = referencia['error']
+
+    for molecula, resultado in resultados_region.items():
+
+        if molecula == 'CH3OH_v0':
+            continue
+
+        N_col = resultado['valor']
+        error_N_col = resultado['error']
+
+        ratio = N_col / N_CH3OH
+
+        if (
+            np.isfinite(error_CH3OH)
+            and np.isfinite(error_N_col)
+        ):
+            error_ratio = ratio * np.sqrt(
+                (error_N_col / N_col)**2
+                + (error_CH3OH / N_CH3OH)**2
+            )
+        else:
+            error_ratio = np.nan
+
+        dict_ratio_CH3OH[region][molecula] = {
+            'valor': ratio,
+            'error': error_ratio,
+        }
+
+def plot_ratio_CH3OH_log(dict_ratio):
+
+    """
+    Representa N(X)/N(CH3OH v_t=0) con escala logarítmica
+    en dos paneles, siguiendo el mismo formato que T_ex.
+    """
+
+    moleculas = sorted({
+        molecula
+        for resultados_region in dict_ratio.values()
+        for molecula in resultados_region
+    })
+
+    x = np.arange(len(moleculas)) * ESPACIO_MOLECULAS
+
+    fig, axes = plt.subplots(
+        2,
+        1,
+        figsize=(30, 14),
+        sharex=True,
+        sharey=True,
+        gridspec_kw={
+            'height_ratios': [1, 1],
+            'hspace': 0.035,
+        }
+    )
+
+    grupos = [
+        REGIONES_PANEL_1,
+        REGIONES_PANEL_2,
+    ]
+
+    for ax, regiones in zip(axes, grupos):
+
+        n_regiones = len(regiones)
+
+        if n_regiones == 5:
+            ancho = 0.30
+            separacion = 0.32
+        else:
+            ancho = 0.32
+            separacion = 0.34
+
+        for i, region in enumerate(regiones):
+
+            valores = []
+            errores = []
+
+            for molecula in moleculas:
+
+                resultado = dict_ratio.get(
+                    region, {}
+                ).get(molecula)
+
+                if resultado is None:
+                    valores.append(np.nan)
+                    errores.append(np.nan)
+                    continue
+
+                valores.append(
+                    resultado['valor']
+                )
+
+                errores.append(
+                    resultado['error']
+                )
+
+            desplazamiento = (
+                i - (n_regiones - 1) / 2
+            ) * separacion
+
+            ax.bar(
+                x + desplazamiento,
+                valores,
+                width=ancho,
+                color=COLOR_POR_REGION[region],
+                hatch=HATCH_POR_REGION[region],
+                edgecolor='black',
+                linewidth=1.1,
+                yerr=errores,
+                capsize=5,
+                label=region,
+                error_kw={
+                    'elinewidth': 1.8,
+                    'capthick': 1.8,
+                    'ecolor': 'black',
+                    'alpha': 1.0,
+                },
+            )
+
+        # Separadores verticales entre moléculas
+        for j in range(len(x) - 1):
+
+            ax.axvline(
+                (x[j] + x[j + 1]) / 2,
+                color='0.82',
+                linewidth=0.8,
+                zorder=0,
+            )
+
+        # Escala logarítmica
+        ax.set_yscale('log')
+
+        ax.tick_params(
+            axis='y',
+            labelsize=FS_YTICKS
+        )
+
+        ax.grid(
+            axis='y',
+            which='both',
+            alpha=0.25
+        )
+
+        ax.legend(
+    loc='upper left',
+    bbox_to_anchor=(0.02, 0.91),
+    ncol=n_regiones,
+    fontsize=FS_LEGEND,
+    frameon=False,
+    columnspacing=1.2,
+    handlelength=1.8,
+)
+
+        ax.set_xlim(
+            x[0] - 1.0,
+            x[-1] + 1.0
+        )
+
+    # Título
+    axes[0].text(
+        0.5,
+        0.995,
+        r'c) $\mathbf{N}(X)/'
+        r'\mathbf{N}(\mathbf{CH_3OH})$',
+        transform=axes[0].transAxes,
+        ha='center',
+        va='top',
+        fontsize=FS_TITULO,
+        fontweight='bold',
+    )
+
+    # Label común y
+    fig.supylabel(
+        r'$N(X)/N(\mathrm{CH_3OH}\;v_t=0)$',
+        fontsize=FS_YLABEL,
+        x=0.025,
+        y = 0.5
+        
+    )
+
+    # Etiquetas moleculares solo abajo
+    axes[-1].set_xticks(x)
+
+    axes[-1].set_xticklabels(
+        [etiqueta_molecula(m) for m in moleculas],
+        rotation=45,
+        ha='right',
+        rotation_mode='anchor',
+        fontsize=FS_XTICKS
+    )
+
+    fig.subplots_adjust(
+        left=0.085,
+        right=0.995,
+        bottom=0.29,
+        top=0.97,
+        hspace=0.035
+    )
+
+    fig.savefig(
+        '/home/jorge/TFM/figures/diag_abundancias/'
+        'abundancias_relativas_log.pdf',
+    )
+
+    plt.show()
+
+
+plot_ratio_CH3OH_log(dict_ratio_CH3OH)
+    
