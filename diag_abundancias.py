@@ -282,9 +282,252 @@ dict_Tex = extraer_temperaturas_excitacion(
     solo_convergidos=False,
 )
 
-dict_logN_col = {}
+def etiqueta_region(region):
+    etiquetas = {
+        'MF2': 'd2',
+        'MM14': 'mm14',
+        'MM24': 'mm24',
+        'MM31': 'mm31',
+        'MM35': 'mm35',
+        'NORTH': 'north',
+        'e2e': 'e2e',
+        'e2w': 'e2w',
+        'e8mm': 'e8mm',
+    }
+
+    return etiquetas.get(region, region)
+
+# ============================================================
+# Ratio 12C/13C a partir de CH3OH / 13CH3OH
+# ============================================================
+
+R_GC = 6.3  # kpc
+
+# Milam et al. (2005)
+PENDIENTE_C = 6.21
+ERROR_PENDIENTE_C = 1.00
+
+ORDENADA_C = 18.71
+ERROR_ORDENADA_C = 7.37
+
+
+ratio_C_esperado = (
+    PENDIENTE_C * R_GC
+    + ORDENADA_C
+)
+
+error_ratio_C_esperado = np.sqrt(
+    (R_GC * ERROR_PENDIENTE_C)**2
+    + ERROR_ORDENADA_C**2
+)
+
+
+print('\n' + '=' * 70)
+print('RATIO 12C/13C')
+print('=' * 70)
+
+print(
+    f'Valor esperado para R_GC = {R_GC:.1f} kpc: '
+    f'{ratio_C_esperado:.1f} ± {error_ratio_C_esperado:.1f}'
+)
+
+print('-' * 70)
+
 
 for region, resultados_region in dict_Ncol.items():
+
+    ch3oh = resultados_region.get('CH3OH_v0')
+    ch3oh_13 = resultados_region.get('C-13-H3OH')
+
+    if ch3oh is None or ch3oh_13 is None:
+        print(
+            f'{etiqueta_region(region):>6s}: '
+            'no están disponibles ambas especies.'
+        )
+        continue
+
+    N_12 = ch3oh['valor']
+    err_12 = ch3oh['error']
+
+    N_13 = ch3oh_13['valor']
+    err_13 = ch3oh_13['error']
+
+    ratio_obs = N_12 / N_13
+
+    # Propagación de errores
+    if (
+        np.isfinite(err_12)
+        and np.isfinite(err_13)
+        and N_12 > 0
+        and N_13 > 0
+    ):
+        error_ratio_obs = ratio_obs * np.sqrt(
+            (err_12 / N_12)**2
+            + (err_13 / N_13)**2
+        )
+    else:
+        error_ratio_obs = np.nan
+
+    diferencia = ratio_obs - ratio_C_esperado
+    factor = ratio_obs / ratio_C_esperado
+
+    print(
+        f'{etiqueta_region(region):>6s}: '
+        f'12C/13C = {ratio_obs:6.1f} '
+        f'± {error_ratio_obs:5.1f} | '
+        f'esperado = {ratio_C_esperado:5.1f} | '
+        f'obs/esp = {factor:.2f}'
+    )
+
+import copy
+
+dict_Ncol_corr = copy.deepcopy(dict_Ncol)
+
+# ============================================================
+# Ratios isotópicos esperados
+# ============================================================
+
+RATIO_C_ESPERADO = ratio_C_esperado
+
+PENDIENTE_O = 58.8
+ERROR_PENDIENTE_O = 11.8
+
+ORDENADA_O = 37.1
+ERROR_ORDENADA_O = 82.6
+
+ratio_O_esperado = (
+    PENDIENTE_O * R_GC
+    + ORDENADA_O
+)
+
+error_ratio_O_esperado = np.sqrt(
+    (R_GC * ERROR_PENDIENTE_O)**2
+    + ERROR_ORDENADA_O**2
+)
+
+
+print('\n' + '=' * 100)
+print('CORRECCIÓN DE N(CH3OH v=0) POR ISOTOPÓLOGOS')
+print('=' * 100)
+
+print(
+    f'12C/13C esperado = '
+    f'{RATIO_C_ESPERADO:.1f}'
+)
+
+print(
+    f'16O/18O esperado = '
+    f'{ratio_O_esperado:.1f}'
+)
+
+print('-' * 100)
+
+
+for region, resultados_region in dict_Ncol.items():
+
+    ch3oh = resultados_region.get('CH3OH_v0')
+    ch3oh_13 = resultados_region.get('C-13-H3OH')
+    ch3oh_18 = resultados_region.get('CH3O-18-H')
+
+    if ch3oh is None:
+        print(
+            f'{etiqueta_region(region):>6s}: '
+            'no existe CH3OH_v0.'
+        )
+        continue
+
+    N_CH3OH = ch3oh['valor']
+    error_CH3OH = ch3oh['error']
+
+    # ========================================================
+    # Opción 1: 13CH3OH
+    # ========================================================
+
+    if ch3oh_13 is not None:
+
+        N_iso = ch3oh_13['valor']
+
+        ratio_obs = N_CH3OH / N_iso
+
+        factor_corr = (
+            RATIO_C_ESPERADO
+            / ratio_obs
+        )
+
+        isotopologo = '13CH3OH'
+        ratio_esperado = RATIO_C_ESPERADO
+
+    # ========================================================
+    # Opción 2: CH3-18OH
+    # ========================================================
+
+    elif ch3oh_18 is not None:
+
+        N_iso = ch3oh_18['valor']
+
+        ratio_obs = N_CH3OH / N_iso
+
+        factor_corr = (
+            ratio_O_esperado
+            / ratio_obs
+        )
+
+        isotopologo = 'CH3-18OH'
+        ratio_esperado = ratio_O_esperado
+
+    # ========================================================
+    # Ningún isotopólogo disponible
+    # ========================================================
+
+    else:
+
+        print(
+            f'{etiqueta_region(region):>6s}: '
+            'no hay isotopólogo disponible.'
+        )
+
+        continue
+
+    # ========================================================
+    # Corregir CH3OH
+    # ========================================================
+
+    N_CH3OH_corr = (
+        N_CH3OH * factor_corr
+    )
+
+    if np.isfinite(error_CH3OH):
+
+        error_CH3OH_corr = (
+            error_CH3OH * factor_corr
+        )
+
+    else:
+
+        error_CH3OH_corr = np.nan
+
+    dict_Ncol_corr[region]['CH3OH_v0']['valor'] = (
+        N_CH3OH_corr
+    )
+
+    dict_Ncol_corr[region]['CH3OH_v0']['error'] = (
+        error_CH3OH_corr
+    )
+
+    print(
+        f'{etiqueta_region(region):>6s}: '
+        f'{isotopologo:>9s} | '
+        f'ratio obs = {ratio_obs:7.2f} | '
+        f'esperado = {ratio_esperado:7.1f} | '
+        f'factor = {factor_corr:6.2f} | '
+        f'N = {N_CH3OH:.3e} -> '
+        f'{N_CH3OH_corr:.3e}'
+    )
+
+
+dict_logN_col = {}
+
+for region, resultados_region in dict_Ncol_corr.items():
 
     dict_logN_col[region] = {}
 
@@ -407,20 +650,7 @@ def etiqueta_molecula(molecula):
 
     return etiquetas.get(molecula, molecula)
 
-def etiqueta_region(region):
-    etiquetas = {
-        'MF2': 'd2',
-        'MM14': 'mm14',
-        'MM24': 'mm24',
-        'MM31': 'mm31',
-        'MM35': 'mm35',
-        'NORTH': 'north',
-        'e2e': 'e2e',
-        'e2w': 'e2w',
-        'e8mm': 'e8mm',
-    }
 
-    return etiquetas.get(region, region)
 
 FS_TITULO = 38
 FS_YLABEL = 35
@@ -1066,7 +1296,7 @@ plot_Tex_por_region(dict_Tex)
 
 dict_ratio_CH3OH = {}
 
-for region, resultados_region in dict_Ncol.items():
+for region, resultados_region in dict_Ncol_corr.items():
 
     dict_ratio_CH3OH[region] = {}
 
@@ -1287,4 +1517,467 @@ def plot_ratio_CH3OH_log(dict_ratio):
 
 
 plot_ratio_CH3OH_log(dict_ratio_CH3OH)
+
+# ============================================================
+# Comparación con modelos químicos - Garrod et al. (2022)
+# Table 18
+# ============================================================
+
+DATOS_GARROD = {
+
+    'C2H5OH': {
+        'IRAS16293B': 2.3e-2,
+        'SgrB2N2':    5.0e-2,
+        'fast':       6.1e-2,
+        'medium':     6.5e-2,
+        'slow':       8.0e-2,
+    },
+
+    'CH3OCH3': {
+        'IRAS16293B': 2.4e-2,
+        'SgrB2N2':    5.5e-2,
+        'fast':       1.0e-2,
+        'medium':     1.7e-2,
+        'slow':       2.6e-2,
+    },
+
+    'CH3OCHO_v0': {
+        'IRAS16293B': 2.6e-2,
+        'SgrB2N2':    3.0e-2,
+        'fast':       1.7e-2,
+        'medium':     1.9e-2,
+        'slow':       3.0e-2,
+    },
+
+    'CH3CHO_v0': {
+        'IRAS16293B': 1.2e-2,
+        'SgrB2N2':    1.1e-2,
+        'fast':       3.6e-2,
+        'medium':     7.3e-2,
+        'slow':       3.0e-2,
+    },
+
+    'Acetona': {
+        'IRAS16293B': 1.7e-3,
+        'SgrB2N2':    1.0e-2,
+        'fast':       5.9e-4,
+        'medium':     6.6e-4,
+        'slow':       1.7e-3,
+    },
+
+    'CH3NCO': {
+        'IRAS16293B': 4.0e-4,
+        'SgrB2N2':    5.5e-3,
+        'fast':       1.1e-6,
+        'medium':     1.1e-6,
+        'slow':       4.4e-6,
+    },
+
+    'CH3CN': {
+        'IRAS16293B': 4.0e-3,
+        'SgrB2N2':    5.5e-2,
+        'fast':       1.6e-4,
+        'medium':     7.8e-4,
+        'slow':       8.5e-3,
+    },
+
+    'C2H5CN': {
+        'IRAS16293B': 3.6e-4,
+        'SgrB2N2':    1.6e-1,
+        'fast':       9.4e-3,
+        'medium':     1.1e-2,
+        'slow':       1.8e-2,
+    },
+}
+
+# ============================================================
+# Especies obtenidas sumando varios estados/conformeros
+# ============================================================
+
+MOLECULAS_COMBINADAS = {
+    'C2H5OH': [
+        'C2H5OH_anti',
+        'C2H5OH_g',
+    ],
+}
+
+
+for region, resultados_region in dict_Ncol_corr.items():
+
+    referencia = resultados_region.get('CH3OH_v0')
+
+    if referencia is None:
+        continue
+
+    N_CH3OH = referencia['valor']
+    error_CH3OH = referencia['error']
+
+    for molecula_total, componentes in MOLECULAS_COMBINADAS.items():
+
+        # Comprobamos que estén todos los componentes
+        if not all(
+            componente in resultados_region
+            for componente in componentes
+        ):
+            continue
+
+        # ----------------------------------------------------
+        # Sumar densidades de columna
+        # ----------------------------------------------------
+
+        N_total = sum(
+            resultados_region[componente]['valor']
+            for componente in componentes
+        )
+
+        # ----------------------------------------------------
+        # Error de la suma
+        # ----------------------------------------------------
+
+        errores_componentes = [
+            resultados_region[componente]['error']
+            for componente in componentes
+        ]
+
+        if all(
+            np.isfinite(error)
+            for error in errores_componentes
+        ):
+            error_N_total = np.sqrt(
+                sum(
+                    error**2
+                    for error in errores_componentes
+                )
+            )
+        else:
+            error_N_total = np.nan
+
+        # ----------------------------------------------------
+        # Ratio total / CH3OH
+        # ----------------------------------------------------
+
+        ratio = N_total / N_CH3OH
+
+        if (
+            np.isfinite(error_N_total)
+            and np.isfinite(error_CH3OH)
+        ):
+            error_ratio = ratio * np.sqrt(
+                (error_N_total / N_total)**2
+                + (error_CH3OH / N_CH3OH)**2
+            )
+        else:
+            error_ratio = np.nan
+
+        # ----------------------------------------------------
+        # Guardar como una nueva especie
+        # ----------------------------------------------------
+
+        dict_ratio_CH3OH[region][molecula_total] = {
+            'valor': ratio,
+            'error': error_ratio,
+        }
+
+def plot_comparacion_modelos_quimicos(
+    dict_ratio,
+    datos_modelos,
+    ruta_salida,
+):
+    """
+    Compara N(X)/N(CH3OH) en W51 con las observaciones de
+    IRAS 16293B y Sgr B2(N2), y con los modelos químicos
+    Fast, Medium y Slow de Garrod et al. (2022).
+
+    Se genera una figura independiente para cada molécula.
+    """
+
+    ruta_salida = Path(ruta_salida)
+    ruta_salida.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    # Orden deseado para nuestras regiones
+    regiones = (
+        REGIONES_PANEL_1
+        + REGIONES_PANEL_2
+    )
+
+    for molecula, datos_lit in datos_modelos.items():
+
+        # ====================================================
+        # Comprobar si tenemos esta molécula en alguna región
+        # ====================================================
+
+        regiones_disponibles = [
+            region
+            for region in regiones
+            if molecula in dict_ratio.get(region, {})
+        ]
+
+        if len(regiones_disponibles) == 0:
+
+            print(
+                f'[modelos] {molecula}: '
+                'no disponible en W51.'
+            )
+
+            continue
+
+        # ====================================================
+        # Preparar valores de W51
+        # ====================================================
+
+        etiquetas_x = []
+        valores = []
+        errores = []
+        colores = []
+
+        for region in regiones_disponibles:
+
+            resultado = dict_ratio[region][molecula]
+
+            valor = resultado['valor']
+            error = resultado['error']
+
+            if (
+                not np.isfinite(valor)
+                or valor <= 0
+            ):
+                continue
+
+            etiquetas_x.append(
+                etiqueta_region(region)
+            )
+
+            valores.append(valor)
+            errores.append(error)
+
+            colores.append(
+                COLOR_POR_REGION[region]
+            )
+
+        # Si después del filtrado no queda nada
+        if len(valores) == 0:
+            continue
+
+        # ====================================================
+        # Añadir fuentes de literatura
+        # ====================================================
+
+        n_w51 = len(valores)
+
+        x_w51 = np.arange(n_w51)
+
+        x_iras = n_w51 + 1
+        x_sgr = n_w51 + 2
+
+        etiquetas_x.extend([
+            'IRAS 16293B',
+            'Sgr B2(N2)',
+        ])
+
+        # ====================================================
+        # Crear figura
+        # ====================================================
+
+        fig, ax = plt.subplots(
+            figsize=(14, 8)
+        )
+
+        # ====================================================
+        # W51
+        # ====================================================
+
+        for i, (
+            x_i,
+            valor,
+            error,
+            color,
+            region,
+        ) in enumerate(zip(
+            x_w51,
+            valores,
+            errores,
+            colores,
+            regiones_disponibles,
+        )):
+
+            if np.isfinite(error):
+
+                ax.errorbar(
+                    x_i,
+                    valor,
+                    yerr=error,
+                    fmt='o',
+                    markersize=8,
+                    color=color,
+                    markeredgecolor='black',
+                    markeredgewidth=1.5,
+                    elinewidth=1.6,
+                    capsize=5,
+                    zorder=5,
+                )
+
+            else:
+
+                ax.scatter(
+                    x_i,
+                    valor,
+                    s=120,
+                    color=color,
+                    edgecolor='black',
+                    linewidth=1.2,
+                    zorder=5,
+                )
+
+        # ====================================================
+        # IRAS 16293B
+        # ====================================================
+
+        ax.scatter(
+            x_iras,
+            datos_lit['IRAS16293B'],
+            marker='D',
+            s=150,
+            color='black',
+            edgecolor='black',
+            linewidth=1.2,
+            zorder=6,
+            label='IRAS 16293B',
+        )
+
+        # ====================================================
+        # Sgr B2(N2)
+        # ====================================================
+
+        ax.scatter(
+            x_sgr,
+            datos_lit['SgrB2N2'],
+            marker='s',
+            s=150,
+            facecolor='white',
+            edgecolor='black',
+            linewidth=1.8,
+            zorder=6,
+            label='Sgr B2(N2)',
+        )
+
+        # ====================================================
+        # Modelos químicos
+        # ====================================================
+
+        xmin = -0.5
+        xmax = x_sgr + 0.5
+
+        ax.hlines(
+            datos_lit['fast'],
+            xmin=xmin,
+            xmax=xmax,
+            linestyles='--',
+            linewidth=2.5,
+            label='Fast model',
+        )
+
+        ax.hlines(
+            datos_lit['medium'],
+            xmin=xmin,
+            xmax=xmax,
+            linestyles='-.',
+            linewidth=2.5,
+            label='Medium model',
+        )
+
+        ax.hlines(
+            datos_lit['slow'],
+            xmin=xmin,
+            xmax=xmax,
+            linestyles=':',
+            linewidth=3.0,
+            label='Slow model',
+        )
+
+        # ====================================================
+        # Formato
+        # ====================================================
+
+        ax.set_yscale('log')
+
+        ax.set_xlim(
+            xmin,
+            xmax,
+        )
+
+        ax.set_xticks(
+            np.arange(len(etiquetas_x))
+        )
+
+        ax.set_xticklabels(
+            etiquetas_x,
+            rotation=35,
+            ha='right',
+            fontsize=18,
+        )
+
+        ax.tick_params(
+            axis='y',
+            labelsize=18,
+        )
+
+        ax.set_ylabel(
+            r'$N(X)/N(\mathrm{CH_3OH})$',
+            fontsize=22,
+        )
+
+        ax.set_title(
+            etiqueta_molecula(molecula),
+            fontsize=26,
+        )
+
+        ax.grid(
+            axis='y',
+            which='both',
+            alpha=0.25,
+        )
+
+        ax.legend(
+            fontsize=15,
+            frameon=False,
+            ncol=2,
+        )
+
+        fig.tight_layout()
+
+        # ====================================================
+        # Guardar
+        # ====================================================
+
+        nombre_archivo = (
+            f'comparacion_modelos_{molecula}.pdf'
+        )
+
+        fig.savefig(
+            ruta_salida / nombre_archivo,
+            bbox_inches='tight',
+        )
+
+        plt.show()
+        plt.close(fig)
+
+        print(
+            f'[modelos] Guardada figura: '
+            f'{nombre_archivo}'
+        )
+
+plot_comparacion_modelos_quimicos(
+    dict_ratio=dict_ratio_CH3OH,
+    datos_modelos=DATOS_GARROD,
+    ruta_salida=(
+        '/home/jorge/TFM/figures/'
+        'comparacion_modelos_quimicos'
+    ),
+)
+
+
+
     
