@@ -1942,8 +1942,9 @@ def plot_comparacion_modelos_quimicos(
 
         ax.legend(
             fontsize=15,
-            frameon=False,
+            frameon=True,
             ncol=2,
+            loc = "best"
         )
 
         fig.tight_layout()
