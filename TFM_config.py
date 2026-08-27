@@ -1486,8 +1486,8 @@ REGION_LINE_CONFIG = {
                 "longs": [20] * u.km / u.s,
             },
             "CH3CN": {
-                "freqs": [91958.726] * u.MHz,
-                "longs": [30] * u.km / u.s,
+                "freqs": [91971.1] * u.MHz,
+                "longs": [20] * u.km / u.s,
             },
             "CH3OC-13-HO": {
                 "freqs": [231669.015] * u.MHz,
@@ -1795,7 +1795,7 @@ REGION_LINE_CONFIG = {
             "CH3CN-15": [] * u.MHz,
             "C-13-H3OH": [] * u.MHz,
             "OC-13-S": [230318] * u.MHz,
-            "CH3CN": [91958.7, 91971.1, 91980] * u.MHz,
+            "CH3CN": [91958.7, 91980] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
             "CH3OC-13-HO": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
