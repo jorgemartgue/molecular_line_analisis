@@ -16,8 +16,8 @@ import astropy.units as u
 # CONFIGURACIÓN
 # ============================================================
 
-REGION = "MM14_MAP"
-MOLECULA = "C2H5OH_anti"
+REGION = "E_NORTH"
+MOLECULA = "CH3CHO_v0"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v_t=0$"
 # MOLECULA_LABEL = r"$\mathrm{anti-C_2H_5OH}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
@@ -73,7 +73,7 @@ FS_MOLECULE = 25
 MAPS_DIR = (
     Path.home()
     / "TFM"
-    / "maps_21Agosto"
+    / "maps_28Agosto"
     / "maps"
 )
 

@@ -888,7 +888,7 @@ def plot_logN_por_region(dict_Ncol):
 
         ax.set_xlim(
             x[0] - 1.0,
-            x[-1] + 1.0
+            x[-1] + 2.2
         )
 
     axes[0].text(
@@ -944,10 +944,11 @@ def plot_logN_por_region(dict_Ncol):
         hspace=0.035
         )
 
+
     fig.savefig(
-        '/home/jorge/TFM/figures/diag_abundancias/'
-        'abundancias_absolutas.pdf',
-    )
+    '/home/jorge/TFM/figures/diag_abundancias/'
+    'abundancias_absolutas.pdf',
+)
 
     plt.show()
 
@@ -1075,7 +1076,7 @@ def plot_logN_CH3OH_por_region(dict_logNcol):
 
         ax.set_xlim(
             x[0] - 1.0,
-            x[-1] + 1.0
+            x[-1] + 2.2
         )
 
     axes[0].text(
@@ -1246,7 +1247,7 @@ def plot_Tex_por_region(dict_Tex):
 
         ax.set_xlim(
             x[0] - 1.0,
-            x[-1] + 1.0
+            x[-1] + 2.2
         )
 
     axes[0].text(
@@ -1464,7 +1465,7 @@ def plot_ratio_CH3OH_log(dict_ratio):
 
         ax.set_xlim(
             x[0] - 1.0,
-            x[-1] + 1.0
+            x[-1] + 2.2
         )
 
     # Título

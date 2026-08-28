@@ -41,7 +41,7 @@ from scipy.stats import pearsonr, spearmanr
 # ============================================================
 
 ruta_fits_chi2 = Path(
-    "/home/jorge/TFM/maps_24Agosto/maps/chi2"
+    "/home/jorge/TFM/maps_28Agosto/chi2"
 )
 
 ruta_regiones = Path(
