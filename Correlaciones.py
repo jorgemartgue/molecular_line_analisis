@@ -52,6 +52,32 @@ ruta_salida_base = Path(
     "/home/jorge/TFM/figures/correlaciones"
 )
 
+# ============================================================
+# GRUPOS PARA AJUSTES Ncol vs Ncol
+# ============================================================
+
+GRUPOS_AJUSTE_NVSN = {
+    "mm31 + d2 + mm14": [
+        "mm31_d2",
+        "MM14_MAP",
+    ],
+
+    "mm24 + mm35 + north": [
+        "NORTH_MAP",
+    ],
+
+    "e2e + e2w": [
+        "E_NORTH",
+    ],
+    
+    "mm31 + d2 + mm14 + e2e + e2w":[
+        "mm31_d2",
+        "MM14_MAP",
+        "E_NORTH"
+        ]
+}
+
+RHO_MIN_AJUSTE_NVSN = 0.6
 
 
 
@@ -80,6 +106,32 @@ regiones_compactas = {
 }
 
 # ============================================================
+# GRUPOS PARA MATRICES DE CORRELACIÓN
+# ============================================================
+
+GRUPOS_MATRIZ_CORRELACION = {
+
+    "all_cores": [
+        ("mm31_d2", "MM31"),
+        ("mm31_d2", "MF2"),
+        ("MM14_MAP", "MM14"),
+
+        ("NORTH_MAP", "MM24"),
+        ("NORTH_MAP", "MM35"),
+        ("NORTH_MAP", "NORTH"),
+
+        ("E_NORTH", "e2e"),
+        ("E_NORTH", "e2w"),
+    ],
+
+    "mm31_d2_mm14": [
+        ("mm31_d2", "MM31"),
+        ("mm31_d2", "MF2"),
+        ("MM14_MAP", "MM14"),
+    ],
+}
+
+# ============================================================
 # NOMBRES Y COLORES FIJOS DE LAS REGIONES COMPACTAS
 # ============================================================
 
@@ -96,14 +148,14 @@ labels_compactas = {
 
 
 colores_compactas_fijos = {
-    "MF2": "tab:blue",
-    "MM31": "tab:orange",
-    "MM24": "tab:green",
-    "MM35": "tab:red",
-    "MM14": "tab:purple",
-    "NORTH": "tab:brown",
-    "e2e": "tab:pink",
-    "e2w": "tab:olive",
+    "MF2":   "#1f77b4",  # azul
+    "MM31":  "#ff7f0e",  # naranja
+    "MM24":  "#2ca02c",  # verde
+    "MM35":  "#d62728",  # rojo
+    "MM14":  "#9467bd",  # morado
+    "NORTH": "#8c564b",  # marrón
+    "e2e":   "#e377c2",  # rosa
+    "e2w":   "#7f7f00",  # oliva oscuro
 }
 
 MODO_GLOBAL = (
@@ -2234,6 +2286,232 @@ def wcs_compatibles(
     return True
 
 # ============================================================
+# EXTRAER UNA PAREJA MOLECULAR PARA VARIOS CORES
+# ============================================================
+
+def extraer_pareja_cores_global(
+    mol1,
+    mol2,
+    cores_seleccionados,
+):
+    """
+    Une los píxeles comunes de mol1 y mol2 pertenecientes
+    a los cores seleccionados.
+
+    Cada elemento de cores_seleccionados es:
+
+        (region_extensa, region_compacta)
+
+    Por ejemplo:
+
+        ("mm31_d2", "MM31")
+        ("mm31_d2", "MF2")
+        ("MM14_MAP", "MM14")
+    """
+
+    x_total = []
+    y_total = []
+
+    for (
+        region_extensa,
+        nombre_compacta,
+    ) in cores_seleccionados:
+
+        contexto = datos_globales.get(
+            region_extensa
+        )
+
+        if contexto is None:
+            continue
+
+        # Ambas moléculas deben existir
+        if (
+            mol1 not in contexto["moleculas"]
+            or mol2 not in contexto["moleculas"]
+        ):
+            continue
+
+        datos_compacta = contexto[
+            "compactas"
+        ].get(nombre_compacta)
+
+        if datos_compacta is None:
+            continue
+
+        if (
+            mol1 not in datos_compacta
+            or mol2 not in datos_compacta
+        ):
+            continue
+
+        d1 = contexto["datos"][mol1]
+        d2 = contexto["datos"][mol2]
+
+        if not wcs_compatibles(
+            d1,
+            d2,
+        ):
+            continue
+
+        # ----------------------------------------
+        # Píxeles válidos para ambas moléculas
+        # dentro del mismo core
+        # ----------------------------------------
+
+        mask1 = datos_compacta[
+            mol1
+        ]["mask"]
+
+        mask2 = datos_compacta[
+            mol2
+        ]["mask"]
+
+        mascara = (
+            mask1
+            & mask2
+            & np.isfinite(d1["N"])
+            & np.isfinite(d2["N"])
+            & (d1["N"] > 0)
+            & (d2["N"] > 0)
+        )
+
+        N1 = d1["N"][
+            mascara
+        ]
+
+        N2 = d2["N"][
+            mascara
+        ]
+
+        if len(N1) == 0:
+            continue
+
+        x_total.append(
+            np.log10(N1)
+        )
+
+        y_total.append(
+            np.log10(N2)
+        )
+
+    if len(x_total) == 0:
+        return None
+
+    return {
+        "x": np.concatenate(
+            x_total
+        ),
+
+        "y": np.concatenate(
+            y_total
+        ),
+    }
+
+# ============================================================
+# CALCULAR MATRIZ DE CORRELACIÓN
+# ============================================================
+
+def calcular_matriz_correlacion_cores(
+    moleculas,
+    cores_seleccionados,
+    min_pixeles=3,
+):
+    """
+    Calcula la matriz de correlación de Spearman entre
+    las densidades de columna de todas las moléculas.
+
+    Para cada pareja molecular se utilizan todos los píxeles
+    comunes disponibles en los cores seleccionados.
+    """
+
+    n_mol = len(
+        moleculas
+    )
+
+    matriz = np.full(
+        (n_mol, n_mol),
+        np.nan,
+        dtype=float,
+    )
+
+    matriz_npix = np.zeros(
+        (n_mol, n_mol),
+        dtype=int,
+    )
+
+    # ========================================================
+    # DIAGONAL
+    # ========================================================
+
+    for i in range(n_mol):
+
+        matriz[
+            i, i
+        ] = 1.0
+
+    # ========================================================
+    # PAREJAS
+    # ========================================================
+
+    for i in range(n_mol):
+
+        for j in range(i):
+
+            mol1 = moleculas[j]
+            mol2 = moleculas[i]
+
+            datos_pareja = (
+                extraer_pareja_cores_global(
+                    mol1,
+                    mol2,
+                    cores_seleccionados,
+                )
+            )
+
+            if datos_pareja is None:
+                continue
+
+            x = datos_pareja["x"]
+            y = datos_pareja["y"]
+
+            n_pix = len(x)
+
+            matriz_npix[
+                i, j
+            ] = n_pix
+
+            matriz_npix[
+                j, i
+            ] = n_pix
+
+            if n_pix < min_pixeles:
+                continue
+
+            if (
+                np.std(x) == 0
+                or np.std(y) == 0
+            ):
+                continue
+
+            rho, _ = spearmanr(
+                x,
+                y,
+            )
+
+            matriz[
+                i, j
+            ] = rho
+
+            matriz[
+                j, i
+            ] = rho
+
+    return (
+        matriz,
+        matriz_npix,
+    )
+
+# ============================================================
 # EXTRAER PÍXELES DE UNA REGIÓN COMPACTA ENTRE DOS MOLÉCULAS
 # ============================================================
 
@@ -2832,6 +3110,209 @@ def plot_ncol_vs_ncol(
         "individuales": resultados_individuales,
         "todos_cores": resultado_total,
     }
+
+
+def extraer_grupo_ncol_global(
+    mol1,
+    mol2,
+    regiones_extensas_grupo,
+):
+    """
+    Une TODOS los píxeles válidos de las regiones extensas
+    indicadas para realizar un único ajuste N(mol1) vs N(mol2).
+
+    No se limita a las regiones compactas.
+
+    Por ejemplo:
+        mm31 + d2 + mm14
+        -> todos los píxeles de mm31_d2
+           + todos los píxeles de MM14_MAP
+    """
+
+    x_total = []
+    y_total = []
+    sx_total = []
+    sy_total = []
+
+    for region_extensa in regiones_extensas_grupo:
+
+        contexto = datos_globales.get(
+            region_extensa
+        )
+
+        if contexto is None:
+            continue
+
+        # Ambas moléculas deben existir
+        if (
+            mol1 not in contexto["moleculas"]
+            or mol2 not in contexto["moleculas"]
+        ):
+            continue
+
+        d1 = contexto["datos"][mol1]
+        d2 = contexto["datos"][mol2]
+
+        # Misma rejilla espacial
+        if not wcs_compatibles(
+            d1,
+            d2,
+        ):
+            print(
+                f"[aviso] {region_extensa}: "
+                f"{mol1} vs {mol2}: "
+                "WCS incompatibles para ajuste de grupo."
+            )
+            continue
+
+        mascara = (
+            np.isfinite(d1["N"])
+            & np.isfinite(d2["N"])
+            & np.isfinite(d1["deltaN"])
+            & np.isfinite(d2["deltaN"])
+            & (d1["N"] > 0)
+            & (d2["N"] > 0)
+            & (d1["deltaN"] >= 0)
+            & (d2["deltaN"] >= 0)
+        )
+
+        N1 = d1["N"][mascara]
+        N2 = d2["N"][mascara]
+
+        dN1 = d1["deltaN"][mascara]
+        dN2 = d2["deltaN"][mascara]
+
+        if len(N1) == 0:
+            continue
+
+        x_total.append(
+            np.log10(N1)
+        )
+
+        y_total.append(
+            np.log10(N2)
+        )
+
+        sx_total.append(
+            dN1
+            / (
+                N1
+                * np.log(10.0)
+            )
+        )
+
+        sy_total.append(
+            dN2
+            / (
+                N2
+                * np.log(10.0)
+            )
+        )
+
+    if len(x_total) == 0:
+        return None
+
+    return {
+        "x": np.concatenate(x_total),
+        "y": np.concatenate(y_total),
+        "sx": np.concatenate(sx_total),
+        "sy": np.concatenate(sy_total),
+        "npix": sum(
+            len(x)
+            for x in x_total
+        ),
+    }
+
+def extraer_todos_pixeles_global(
+    mol1,
+    mol2,
+):
+    """
+    Une absolutamente todos los píxeles válidos disponibles
+    de todas las regiones extensas donde existan ambas moléculas.
+
+    Incluye tanto regiones compactas como píxeles exteriores.
+    """
+
+    x_total = []
+    y_total = []
+    sx_total = []
+    sy_total = []
+
+    for (
+        region_extensa,
+        contexto
+    ) in datos_globales.items():
+
+        if (
+            mol1 not in contexto["moleculas"]
+            or mol2 not in contexto["moleculas"]
+        ):
+            continue
+
+        d1 = contexto["datos"][mol1]
+        d2 = contexto["datos"][mol2]
+
+        if not wcs_compatibles(
+            d1,
+            d2,
+        ):
+            continue
+
+        mascara = (
+            np.isfinite(d1["N"])
+            & np.isfinite(d2["N"])
+            & np.isfinite(d1["deltaN"])
+            & np.isfinite(d2["deltaN"])
+            & (d1["N"] > 0)
+            & (d2["N"] > 0)
+            & (d1["deltaN"] >= 0)
+            & (d2["deltaN"] >= 0)
+        )
+
+        N1 = d1["N"][mascara]
+        N2 = d2["N"][mascara]
+
+        dN1 = d1["deltaN"][mascara]
+        dN2 = d2["deltaN"][mascara]
+
+        if len(N1) == 0:
+            continue
+
+        x_total.append(
+            np.log10(N1)
+        )
+
+        y_total.append(
+            np.log10(N2)
+        )
+
+        sx_total.append(
+            dN1
+            / (
+                N1
+                * np.log(10.0)
+            )
+        )
+
+        sy_total.append(
+            dN2
+            / (
+                N2
+                * np.log(10.0)
+            )
+        )
+
+    if len(x_total) == 0:
+        return None
+
+    return {
+        "x": np.concatenate(x_total),
+        "y": np.concatenate(y_total),
+        "sx": np.concatenate(sx_total),
+        "sy": np.concatenate(sy_total),
+    }
+
 # ============================================================
 # FIGURA GLOBAL log(Nmol1) vs log(Nmol2)
 # ============================================================
@@ -3257,7 +3738,240 @@ def plot_ncol_vs_ncol_global(
                     * np.log(10.0)
                 )
             )
+    # ========================================================
+    # AJUSTES DE GRUPOS DE REGIONES
+    # ========================================================
 
+    resultados_grupos = {}
+
+    estilos_grupos = {
+        "mm31 + d2 + mm14": {
+            "color": "#00A6D6",      # cyan fuerte
+            "linestyle": "--",
+    },
+
+        "mm24 + mm35 + north": {
+            "color": "#A4D000",      # verde lima
+            "linestyle": "-.",
+            },
+
+        "e2e + e2w": {
+            "color": "#FFB000",      # ámbar
+            "linestyle": ":",
+            },
+
+        "mm31 + d2 + mm14 + e2e + e2w": {
+            "color": "#00A087",      # turquesa oscuro
+            "linestyle": (0, (5, 2)),
+            },
+        }
+
+    for (
+        nombre_grupo,
+        miembros_grupo,
+    ) in GRUPOS_AJUSTE_NVSN.items():
+
+        datos_grupo = extraer_grupo_ncol_global(
+            mol1,
+            mol2,
+            miembros_grupo,
+        )
+
+        if datos_grupo is None:
+            resultados_grupos[
+                nombre_grupo
+            ] = None
+            continue
+
+        resultado_grupo = ajustar_lineal(
+            datos_grupo["x"],
+            datos_grupo["y"],
+            datos_grupo["sx"],
+            datos_grupo["sy"],
+        )
+
+        resultados_grupos[
+            nombre_grupo
+        ] = resultado_grupo
+
+        if resultado_grupo is None:
+            continue
+
+        rho = resultado_grupo[
+            "spearman"
+        ]
+
+        # ----------------------------------------------------
+        # Solo mostramos correlaciones |rho| > 0.6
+        # ----------------------------------------------------
+
+        if (
+            not np.isfinite(rho)
+            or abs(rho) <= RHO_MIN_AJUSTE_NVSN
+        ):
+            continue
+
+        xmin = np.min(
+            resultado_grupo["x"]
+        )
+
+        xmax = np.max(
+            resultado_grupo["x"]
+        )
+
+        x_modelo = np.linspace(
+            xmin,
+            xmax,
+            300,
+        )
+
+        y_modelo, sigma_modelo = banda_lineal(
+            x_modelo,
+            resultado_grupo["slope"],
+            resultado_grupo["intercept"],
+            resultado_grupo["cov_beta"],
+        )
+
+        estilo = estilos_grupos[
+            nombre_grupo
+        ]
+
+        ax.plot(
+            x_modelo,
+            y_modelo,
+            color=estilo["color"],
+            linestyle=estilo["linestyle"],
+            linewidth=3.0,
+            zorder=8,
+        )
+
+        ax.fill_between(
+            x_modelo,
+            y_modelo - 1.96 * sigma_modelo,
+            y_modelo + 1.96 * sigma_modelo,
+            color=estilo["color"],
+            alpha=0.10,
+            linewidth=0,
+            zorder=2,
+        )
+
+        filas_leyenda.append(
+            {
+                "nombre": (
+                    f"{nombre_grupo} fit"
+                ),
+                "color": estilo["color"],
+                "rho": rho,
+                "slope": resultado_grupo[
+                    "slope"
+                ],
+                "slope_err": resultado_grupo[
+                    "slope_err"
+                ],
+            }
+        )
+
+    # ========================================================
+    # AJUSTE DE ABSOLUTAMENTE TODOS LOS PÍXELES
+    # ========================================================
+
+    datos_todos_pixeles = (
+        extraer_todos_pixeles_global(
+            mol1,
+            mol2,
+        )
+    )
+
+    resultado_todos_pixeles = None
+
+    if datos_todos_pixeles is not None:
+
+        resultado_todos_pixeles = ajustar_lineal(
+            datos_todos_pixeles["x"],
+            datos_todos_pixeles["y"],
+            datos_todos_pixeles["sx"],
+            datos_todos_pixeles["sy"],
+        )
+
+        if resultado_todos_pixeles is not None:
+
+            rho = resultado_todos_pixeles[
+                "spearman"
+            ]
+
+            if (
+                np.isfinite(rho)
+                and abs(rho) > RHO_MIN_AJUSTE_NVSN
+            ):
+
+                xmin = np.min(
+                    resultado_todos_pixeles["x"]
+                )
+
+                xmax = np.max(
+                    resultado_todos_pixeles["x"]
+                )
+
+                x_modelo = np.linspace(
+                    xmin,
+                    xmax,
+                    300,
+                )
+
+                y_modelo, sigma_modelo = (
+                    banda_lineal(
+                        x_modelo,
+                        resultado_todos_pixeles[
+                            "slope"
+                        ],
+                        resultado_todos_pixeles[
+                            "intercept"
+                        ],
+                        resultado_todos_pixeles[
+                            "cov_beta"
+                        ],
+                    )
+                )
+
+                ax.plot(
+                    x_modelo,
+                    y_modelo,
+                    color="black",
+                    linestyle="-",
+                    linewidth=3.5,
+                    zorder=10,
+                )
+
+                ax.fill_between(
+                    x_modelo,
+                    y_modelo - 1.96 * sigma_modelo,
+                    y_modelo + 1.96 * sigma_modelo,
+                    color="black",
+                    alpha=0.08,
+                    linewidth=0,
+                    zorder=2,
+                )
+
+                filas_leyenda.append(
+                    {
+                        "nombre": (
+                            "All pixels fit"
+                        ),
+                        "color": "black",
+                        "rho": rho,
+                        "slope": (
+                            resultado_todos_pixeles[
+                                "slope"
+                            ]
+                        ),
+                        "slope_err": (
+                            resultado_todos_pixeles[
+                                "slope_err"
+                            ]
+                        ),
+                    }
+                )
+                
     # ========================================================
     # NINGUNA REGIÓN VÁLIDA
     # ========================================================
@@ -3653,3 +4367,289 @@ else:
             mol2,
             ruta_salida,
         )
+# %%
+            
+
+# ============================================================
+# FIGURA MATRIZ DE CORRELACIÓN
+# ============================================================
+
+def plot_matriz_correlacion_cores(
+    moleculas,
+    cores_seleccionados,
+    titulo,
+    ruta_salida,
+    nombre_archivo,
+):
+    """
+    Genera una matriz triangular inferior de correlaciones
+    de Spearman entre las densidades de columna moleculares.
+    """
+
+    matriz, matriz_npix = (
+        calcular_matriz_correlacion_cores(
+            moleculas,
+            cores_seleccionados,
+        )
+    )
+
+    n_mol = len(
+        moleculas
+    )
+
+    # ========================================================
+    # OCULTAR TRIÁNGULO SUPERIOR
+    # ========================================================
+
+    mascara_superior = np.triu(
+        np.ones_like(
+            matriz,
+            dtype=bool,
+        ),
+        k=1,
+    )
+
+    matriz_plot = np.ma.array(
+        matriz,
+        mask=mascara_superior,
+    )
+
+    # ========================================================
+    # FIGURA
+    # ========================================================
+
+    tamano = max(
+        9,
+        0.85 * n_mol,
+    )
+
+    fig, ax = plt.subplots(
+        figsize=(
+            tamano,
+            tamano,
+        )
+    )
+
+    cmap = plt.cm.seismic.copy()
+
+    cmap.set_bad(
+        color="white"
+    )
+
+    im = ax.imshow(
+        matriz_plot,
+        cmap=cmap,
+        vmin=0.21,
+        vmax=1,
+        origin="upper",
+    )
+
+    # ========================================================
+    # VALORES EN CADA CELDA
+    # ========================================================
+
+    for i in range(n_mol):
+
+        for j in range(i + 1):
+
+            valor = matriz[
+                i, j
+            ]
+
+            if not np.isfinite(
+                valor
+            ):
+                continue
+
+            if i == j:
+
+                texto = "1"
+
+            else:
+
+                texto = (
+                    f"{valor:.2f}"
+                )
+
+            # Texto blanco en correlaciones intensas
+            if abs(valor) >= 0.65 or abs(valor) <= 0.55:
+
+                color_texto = (
+                    "white"
+                )
+
+            else:
+
+                color_texto = (
+                    "black"
+                    )
+
+            ax.text(
+                j,
+                i,
+                texto,
+                ha="center",
+                va="center",
+                fontsize=11,
+                fontweight="bold",
+                color=color_texto,
+            )
+
+    # ========================================================
+    # EJES
+    # ========================================================
+
+    ax.set_xticks(
+        np.arange(
+            n_mol
+        )
+    )
+
+    ax.set_yticks(
+        np.arange(
+            n_mol
+        )
+    )
+
+    ax.set_xticklabels(
+        moleculas,
+        rotation=45,
+        ha="right",
+        fontsize=11,
+    )
+
+    ax.set_yticklabels(
+        moleculas,
+        fontsize=11,
+    )
+
+    ax.tick_params(
+        length=0
+    )
+
+    ax.set_title(
+        titulo,
+        fontsize=16,
+        pad=18,
+    )
+
+    # Quitamos bordes exteriores
+    for spine in ax.spines.values():
+        spine.set_visible(
+            False
+        )
+
+    # ========================================================
+    # COLORBAR
+    # ========================================================
+
+    cbar = fig.colorbar(
+        im,
+        ax=ax,
+        fraction=0.046,
+        pad=0.04,
+    )
+
+    cbar.set_label(
+        r"Spearman $\rho$",
+        fontsize=13,
+    )
+
+    cbar.ax.tick_params(
+        labelsize=11
+    )
+
+    fig.tight_layout()
+
+    # ========================================================
+    # GUARDAR
+    # ========================================================
+
+    ruta_salida = Path(
+        ruta_salida
+    )
+
+    ruta_salida.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    ruta_pdf = (
+        ruta_salida
+        / nombre_archivo
+    )
+
+    fig.savefig(
+        ruta_pdf,
+        bbox_inches="tight",
+    )
+
+    plt.show()
+
+    plt.close(
+        fig
+    )
+
+    print(
+        f"[guardado] {ruta_pdf}"
+    )
+
+    return {
+        "matriz": matriz,
+        "npix": matriz_npix,
+    }
+
+
+# ============================================================
+# GENERAR MATRICES DE CORRELACIÓN
+# ============================================================
+
+ruta_matrices = (
+    ruta_salida_base
+    / "GLOBAL"
+    / "matrices_correlacion"
+)
+
+# ============================================================
+# TODOS LOS CORES
+# ============================================================
+
+resultado_matriz_all = (
+    plot_matriz_correlacion_cores(
+        moleculas=moleculas,
+        cores_seleccionados=(
+            GRUPOS_MATRIZ_CORRELACION[
+                "all_cores"
+            ]
+        ),
+        titulo=(
+            "All compact regions"
+        ),
+        ruta_salida=ruta_matrices,
+        nombre_archivo=(
+            "matriz_correlacion_all_cores.pdf"
+        ),
+    )
+)
+
+# ============================================================
+# mm31 + d2 + mm14
+# ============================================================
+
+resultado_matriz_irs2 = (
+    plot_matriz_correlacion_cores(
+        moleculas=moleculas,
+        cores_seleccionados=(
+            GRUPOS_MATRIZ_CORRELACION[
+                "mm31_d2_mm14"
+            ]
+        ),
+        titulo=(
+            "mm31 + d2 + mm14"
+        ),
+        ruta_salida=ruta_matrices,
+        nombre_archivo=(
+            "matriz_correlacion_mm31_d2_mm14.pdf"
+        ),
+    )
+)
