@@ -158,6 +158,92 @@ colores_compactas_fijos = {
     "e2w":   "#7f7f00",  # oliva oscuro
 }
 
+# ============================================================
+# ETIQUETAS CIENTÍFICAS DE LAS MOLÉCULAS
+# ============================================================
+
+FORMULAS_MOLECULAS = {
+
+    "Acetona": (
+        r"\mathrm{(CH_3)_2CO}"
+    ),
+
+    "C-13-H3CN": (
+        r"^{13}\mathrm{CH_3CN}"
+    ),
+
+    "C-13-H3OH": (
+        r"^{13}\mathrm{CH_3OH}"
+    ),
+
+    "C2H5CN": (
+        r"\mathrm{C_2H_5CN}"
+    ),
+
+    "C2H5OH_anti": (
+        r"\mathrm{anti-C_2H_5OH}"
+    ),
+
+    "C2H5OH_g": (
+        r"\mathrm{gauche-C_2H_5OH}"
+    ),
+
+    "CH3CHO_v0": (
+        r"\mathrm{CH_3CHO}\;(v_t=0)"
+    ),
+
+    "CH3CN": (
+        r"\mathrm{CH_3CN}"
+    ),
+
+    "CH3NCO": (
+        r"\mathrm{CH_3NCO}"
+    ),
+
+    "CH3O-18-H": (
+        r"\mathrm{CH_3^{18}OH}"
+    ),
+
+    "CH3OCHO_v0": (
+        r"\mathrm{CH_3OCHO}\;(v_t=0)"
+    ),
+
+    "CH3OCHO_v1": (
+        r"\mathrm{CH_3OCHO}\;(v_t=1)"
+    ),
+
+    "CH3OH_v0": (
+        r"\mathrm{CH_3OH}\;(v_t=0)"
+    ),
+
+    "CH3OH_v1": (
+        r"\mathrm{CH_3OH}\;(v_t=1)"
+    ),
+}
+
+
+def formula_molecula(
+    molecula,
+):
+
+    return FORMULAS_MOLECULAS.get(
+        molecula,
+        rf"\mathrm{{{molecula}}}",
+    )
+
+
+def label_molecula(
+    molecula,
+):
+
+    return (
+        "$"
+        + formula_molecula(
+            molecula
+        )
+        + "$"
+    )
+
 MODO_GLOBAL = (
     REGION == "GLOBAL"
 )
@@ -909,29 +995,53 @@ def ajustar_lineal(
     y,
     sx=None,
     sy=None,
+    max_iter=100,
+    tol=1e-8,
 ):
     """
-    Ajuste lineal ordinario por mínimos cuadrados:
+    Ajuste lineal:
 
         y = m*x + b
 
-    Las incertidumbres sx y sy no intervienen en el ajuste.
-    Se utilizan únicamente para estimar la dispersión
-    esperada debida a las medidas.
+    teniendo en cuenta:
+        - incertidumbre en x
+        - incertidumbre en y
+        - dispersión real de los puntos respecto al ajuste
+
+    Se utiliza:
+
+        sigma_eff^2 = sy^2 + m^2 sx^2
+
+    y la covarianza final se escala con chi2 reducido
+    cuando la dispersión observada es mayor que la
+    esperada por las incertidumbres.
     """
 
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
+    x = np.asarray(
+        x,
+        dtype=float,
+    )
+
+    y = np.asarray(
+        y,
+        dtype=float,
+    )
 
     if sx is not None:
-        sx = np.asarray(sx, dtype=float)
+        sx = np.asarray(
+            sx,
+            dtype=float,
+        )
 
     if sy is not None:
-        sy = np.asarray(sy, dtype=float)
+        sy = np.asarray(
+            sy,
+            dtype=float,
+        )
 
-    # ----------------------------------------
-    # Píxeles válidos
-    # ----------------------------------------
+    # ========================================================
+    # PUNTOS VÁLIDOS
+    # ========================================================
 
     mask = (
         np.isfinite(x)
@@ -939,40 +1049,204 @@ def ajustar_lineal(
     )
 
     if sx is not None:
-        mask &= np.isfinite(sx)
+        mask &= (
+            np.isfinite(sx)
+            & (sx >= 0)
+        )
 
     if sy is not None:
-        mask &= np.isfinite(sy)
+        mask &= (
+            np.isfinite(sy)
+            & (sy > 0)
+        )
 
     x_fit = x[mask]
     y_fit = y[mask]
 
-    if sx is not None:
-        sx_fit = sx[mask]
-    else:
-        sx_fit = None
+    sx_fit = (
+        sx[mask]
+        if sx is not None
+        else None
+    )
 
-    if sy is not None:
-        sy_fit = sy[mask]
-    else:
-        sy_fit = None
+    sy_fit = (
+        sy[mask]
+        if sy is not None
+        else None
+    )
 
     if len(x_fit) < 3:
         return None
 
-    # ----------------------------------------
-    # Ajuste lineal y = m*x + b
-    # ----------------------------------------
+    # ========================================================
+    # AJUSTE INICIAL
+    # ========================================================
 
-    coeficientes, cov = np.polyfit(
+    pendiente, intercepto = np.polyfit(
         x_fit,
         y_fit,
         1,
-        cov=True,
     )
 
-    pendiente = coeficientes[0]
-    intercepto = coeficientes[1]
+    # ========================================================
+    # AJUSTE CON INCERTIDUMBRES EN X E Y
+    # ========================================================
+
+    if (
+        sx_fit is not None
+        and sy_fit is not None
+    ):
+
+        for _ in range(max_iter):
+
+            pendiente_anterior = pendiente
+
+            sigma_eff = np.sqrt(
+                sy_fit**2
+                + (
+                    pendiente
+                    * sx_fit
+                )**2
+            )
+
+            pesos = (
+                1.0 / sigma_eff
+            )
+
+            coeficientes = np.polyfit(
+                x_fit,
+                y_fit,
+                1,
+                w=pesos,
+            )
+
+            pendiente = coeficientes[0]
+            intercepto = coeficientes[1]
+
+            if (
+                abs(
+                    pendiente
+                    - pendiente_anterior
+                )
+                < tol
+            ):
+                break
+
+        # ----------------------------------------------------
+        # Sigma efectiva definitiva
+        # ----------------------------------------------------
+
+        sigma_eff = np.sqrt(
+            sy_fit**2
+            + (
+                pendiente
+                * sx_fit
+            )**2
+        )
+
+        pesos = (
+            1.0 / sigma_eff
+        )
+
+        # ----------------------------------------------------
+        # Covarianza SIN escalar
+        # ----------------------------------------------------
+
+        coeficientes, cov_unscaled = np.polyfit(
+            x_fit,
+            y_fit,
+            1,
+            w=pesos,
+            cov="unscaled",
+        )
+
+        pendiente = coeficientes[0]
+        intercepto = coeficientes[1]
+
+        # ----------------------------------------------------
+        # Residuos
+        # ----------------------------------------------------
+
+        y_modelo = (
+            pendiente * x_fit
+            + intercepto
+        )
+
+        residuos = (
+            y_fit
+            - y_modelo
+        )
+
+        # ----------------------------------------------------
+        # Chi2
+        # ----------------------------------------------------
+
+        chi2 = np.sum(
+            (
+                residuos
+                / sigma_eff
+            )**2
+        )
+
+        dof = (
+            len(x_fit) - 2
+        )
+
+        chi2_red = (
+            chi2 / dof
+        )
+
+        # ----------------------------------------------------
+        # Covarianza final
+        #
+        # Si chi2_red > 1, la dispersión observada es
+        # mayor que la esperada por las incertidumbres.
+        #
+        # No reducimos los errores si chi2_red < 1.
+        # ----------------------------------------------------
+
+        factor_escala = max(
+            1.0,
+            chi2_red,
+        )
+
+        cov = (
+            cov_unscaled
+            * factor_escala
+        )
+
+    else:
+
+        # ====================================================
+        # SIN INCERTIDUMBRES
+        # ====================================================
+
+        coeficientes, cov = np.polyfit(
+            x_fit,
+            y_fit,
+            1,
+            cov=True,
+        )
+
+        pendiente = coeficientes[0]
+        intercepto = coeficientes[1]
+
+        y_modelo = (
+            pendiente * x_fit
+            + intercepto
+        )
+
+        residuos = (
+            y_fit
+            - y_modelo
+        )
+
+        chi2 = np.nan
+        chi2_red = np.nan
+
+    # ========================================================
+    # INCERTIDUMBRES DE LOS PARÁMETROS
+    # ========================================================
 
     error_pendiente = np.sqrt(
         cov[0, 0]
@@ -982,9 +1256,9 @@ def ajustar_lineal(
         cov[1, 1]
     )
 
-    # ----------------------------------------
-    # Modelo
-    # ----------------------------------------
+    # ========================================================
+    # MODELO Y RESIDUOS
+    # ========================================================
 
     y_modelo = (
         pendiente * x_fit
@@ -996,9 +1270,9 @@ def ajustar_lineal(
         - y_modelo
     )
 
-    # ----------------------------------------
+    # ========================================================
     # R²
-    # ----------------------------------------
+    # ========================================================
 
     ss_res = np.sum(
         residuos**2
@@ -1012,64 +1286,19 @@ def ajustar_lineal(
     )
 
     if ss_tot > 0:
+
         r2 = (
             1.0
             - ss_res / ss_tot
         )
+
     else:
+
         r2 = np.nan
 
-    # ----------------------------------------
-    # Dispersión residual
-    # ----------------------------------------
-
-    if len(residuos) > 2:
-        sigma_res = np.std(
-            residuos,
-            ddof=2,
-        )
-    else:
-        sigma_res = np.nan
-
-    # ----------------------------------------
-    # Dispersión esperada por las medidas
-    # ----------------------------------------
-
-    if (
-        sx_fit is not None
-        and sy_fit is not None
-    ):
-
-        sigma_medida_pix = np.sqrt(
-            sy_fit**2
-            + (
-                pendiente
-                * sx_fit
-            )**2
-        )
-
-        sigma_meas = np.sqrt(
-            np.mean(
-                sigma_medida_pix**2
-            )
-        )
-
-        sigma_int = np.sqrt(
-            max(
-                sigma_res**2
-                - sigma_meas**2,
-                0.0,
-            )
-        )
-
-    else:
-
-        sigma_meas = np.nan
-        sigma_int = np.nan
-
-    # ----------------------------------------
-    # Correlaciones
-    # ----------------------------------------
+    # ========================================================
+    # CORRELACIONES
+    # ========================================================
 
     if (
         np.std(x_fit) > 0
@@ -1091,9 +1320,14 @@ def ajustar_lineal(
         pearson = np.nan
         spearman = np.nan
 
+    # ========================================================
+    # RESULTADO
+    # ========================================================
+
     return {
         "x": x_fit,
         "y": y_fit,
+
         "sx": sx_fit,
         "sy": sy_fit,
 
@@ -1108,9 +1342,8 @@ def ajustar_lineal(
 
         "r2": r2,
 
-        "sigma_res": sigma_res,
-        "sigma_meas": sigma_meas,
-        "sigma_int": sigma_int,
+        "chi2": chi2,
+        "chi2_red": chi2_red,
 
         "cov_beta": cov,
 
@@ -1550,9 +1783,9 @@ def plot_tex_vs_logn(
     )
 
     ax.set_title(
-        f"{REGION}: {molecula}",
+        f"{REGION}: {label_molecula(molecula)}",
         fontsize=17,
-    )
+        )
 
     ax.tick_params(
         axis="both",
@@ -2016,9 +2249,9 @@ def plot_tex_vs_logn_global(
     )
 
     ax.set_title(
-        f"GLOBAL: {molecula}",
+        f"GLOBAL: {label_molecula(molecula)}",
         fontsize=17,
-    )
+        )
 
     ax.tick_params(
         axis="both",
@@ -3044,23 +3277,27 @@ def plot_ncol_vs_ncol(
     # ========================================================
 
     ax.set_xlabel(
-        rf"$\log_{{10}}"
-        rf"\left[N({mol1})/"
-        rf"\mathrm{{cm}}^{{-2}}\right]$",
+        rf"$\log_{{10}}\left["
+        rf"N\left({formula_molecula(mol1)}\right)"
+        rf"/\mathrm{{cm}}^{{-2}}"
+        rf"\right]$",
         fontsize=15,
-    )
+        )
 
     ax.set_ylabel(
-        rf"$\log_{{10}}"
-        rf"\left[N({mol2})/"
-        rf"\mathrm{{cm}}^{{-2}}\right]$",
+        rf"$\log_{{10}}\left["
+        rf"N\left({formula_molecula(mol2)}\right)"
+        rf"/\mathrm{{cm}}^{{-2}}"
+        rf"\right]$",
         fontsize=15,
-    )
+        )
 
     ax.set_title(
-        f"{REGION}: {mol1} vs {mol2}",
+        f"{REGION}: "
+        f"{label_molecula(mol1)} vs "
+        f"{label_molecula(mol2)}",
         fontsize=16,
-    )
+        )   
 
     ax.tick_params(
         axis="both",
@@ -3342,7 +3579,14 @@ def plot_ncol_vs_ncol_global(
     )
 
     resultados_individuales = {}
-    filas_leyenda = []
+
+    # Leyenda 1:
+    # regiones compactas + exterior
+    filas_leyenda_regiones = []
+
+    # Leyenda 2:
+    # ajustes de grupos/globales
+    filas_leyenda_ajustes = []
 
     x_todos = []
     y_todos = []
@@ -3660,7 +3904,7 @@ def plot_ncol_vs_ncol_global(
                 zorder=2,
             )
 
-            filas_leyenda.append(
+            filas_leyenda_regiones.append(
                 {
                     "nombre": label_compacta,
                     "color": color,
@@ -3668,9 +3912,9 @@ def plot_ncol_vs_ncol_global(
                     "slope": resultado["slope"],
                     "slope_err": resultado[
                         "slope_err"
-                    ],
-                }
-            )
+                        ],
+                    }
+                )
 
         # ====================================================
         # DATOS PARA EL AJUSTE CONJUNTO
@@ -3855,7 +4099,7 @@ def plot_ncol_vs_ncol_global(
             zorder=2,
         )
 
-        filas_leyenda.append(
+        filas_leyenda_ajustes.append(
             {
                 "nombre": (
                     f"{nombre_grupo} fit"
@@ -3952,25 +4196,25 @@ def plot_ncol_vs_ncol_global(
                     zorder=2,
                 )
 
-                filas_leyenda.append(
+                filas_leyenda_ajustes.append(
                     {
                         "nombre": (
                             "All pixels fit"
-                        ),
+                            ),
                         "color": "black",
                         "rho": rho,
                         "slope": (
                             resultado_todos_pixeles[
                                 "slope"
-                            ]
-                        ),
+                                ]
+                            ),
                         "slope_err": (
                             resultado_todos_pixeles[
                                 "slope_err"
-                            ]
-                        ),
-                    }
-                )
+                                ]
+                            ),
+                        }
+                    )
                 
     # ========================================================
     # NINGUNA REGIÓN VÁLIDA
@@ -3985,7 +4229,7 @@ def plot_ncol_vs_ncol_global(
         return None
 
     # ========================================================
-    # AJUSTE CONJUNTO GLOBAL
+    # AJUSTE CONJUNTO DE TODAS LAS REGIONES COMPACTAS
     # ========================================================
 
     resultado_total = None
@@ -4020,63 +4264,83 @@ def plot_ncol_vs_ncol_global(
         )
 
         if resultado_total is not None:
+    
+            rho_total = resultado_total[
+                "spearman"
+            ]
 
-            xmin = np.min(
-                resultado_total["x"]
-            )
+            # ----------------------------------------------------
+            # Solo representar si |rho| > 0.6
+            # ----------------------------------------------------
 
-            xmax = np.max(
-                resultado_total["x"]
-            )
+            if (
+                np.isfinite(rho_total)
+                and abs(rho_total)
+                > RHO_MIN_AJUSTE_NVSN
+            ):
 
-            x_modelo = np.linspace(
-                xmin,
-                xmax,
-                300,
-            )
-
-            y_modelo, sigma_modelo = (
-                banda_lineal(
-                    x_modelo,
-                    resultado_total["slope"],
-                    resultado_total["intercept"],
-                    resultado_total["cov_beta"],
+                xmin = np.min(
+                    resultado_total["x"]
                 )
-            )
 
-            ax.plot(
-                x_modelo,
-                y_modelo,
-                color="black",
-                linestyle="--",
-                linewidth=3.0,
-                zorder=7,
-            )
+                xmax = np.max(
+                    resultado_total["x"]
+                )
 
-            ax.fill_between(
-                x_modelo,
-                y_modelo - 1.96 * sigma_modelo,
-                y_modelo + 1.96 * sigma_modelo,
-                color="black",
-                alpha=0.10,
-                linewidth=0,
-                zorder=2,
-            )
+                x_modelo = np.linspace(
+                    xmin,
+                    xmax,
+                    300,
+                )
 
-            fila_ajuste_global = {
-                "nombre": (
-                    "All compact regions fit"
-                ),
-                "color": "black",
-                "rho": resultado_total[
-                    "spearman"
-                ],
-                "slope": resultado_total[
-                    "slope"
-                ],
-                "slope_err": resultado_total[
-                    "slope_err"
-                ],
+                y_modelo, sigma_modelo = (
+                    banda_lineal(
+                        x_modelo,
+                        resultado_total[
+                            "slope"
+                        ],
+                        resultado_total[
+                            "intercept"
+                        ],
+                        resultado_total[
+                            "cov_beta"
+                        ],
+                    )
+                )
+
+                ax.plot(
+                    x_modelo,
+                    y_modelo,
+                    color="black",
+                    linestyle="--",
+                    linewidth=3.0,
+                    zorder=7,
+                )
+
+                ax.fill_between(
+                    x_modelo,
+                    y_modelo
+                    - 1.96 * sigma_modelo,
+                    y_modelo
+                    + 1.96 * sigma_modelo,
+                    color="black",
+                    alpha=0.10,
+                    linewidth=0,
+                    zorder=2,
+                )
+
+                fila_ajuste_global = {
+                    "nombre": (
+                        "All compact regions fit"
+                    ),
+                    "color": "black",
+                    "rho": rho_total,
+                    "slope": resultado_total[
+                        "slope"
+                    ],
+                    "slope_err": resultado_total[
+                        "slope_err"
+                    ],
             }
 
     # ========================================================
@@ -4084,23 +4348,20 @@ def plot_ncol_vs_ncol_global(
     # ========================================================
 
     ax.set_xlabel(
-        rf"$\log_{{10}}"
-        rf"\left[N({mol1})/"
-        rf"\mathrm{{cm}}^{{-2}}\right]$",
+        rf"$\log_{{10}}\left["
+        rf"N\left({formula_molecula(mol1)}\right)"
+        rf"/\mathrm{{cm}}^{{-2}}"
+        rf"\right]$",
         fontsize=15,
-    )
+        )
 
     ax.set_ylabel(
-        rf"$\log_{{10}}"
-        rf"\left[N({mol2})/"
-        rf"\mathrm{{cm}}^{{-2}}\right]$",
+        rf"$\log_{{10}}\left["
+        rf"N\left({formula_molecula(mol2)}\right)"
+        rf"/\mathrm{{cm}}^{{-2}}"
+        rf"\right]$",
         fontsize=15,
-    )
-
-    ax.set_title(
-        f"GLOBAL: {mol1} vs {mol2}",
-        fontsize=16,
-    )
+        )
 
     ax.tick_params(
         axis="both",
@@ -4108,15 +4369,15 @@ def plot_ncol_vs_ncol_global(
     )
 
     # ========================================================
-    # LEYENDA ÚNICA
+    # LEYENDA 1: REGIONES COMPACTAS
     # ========================================================
 
-    filas = []
+    filas_regiones = []
 
     # Exterior
     if exterior_etiquetado:
 
-        filas.append(
+        filas_regiones.append(
             TextArea(
                 "Outside compact regions",
                 textprops={
@@ -4127,7 +4388,7 @@ def plot_ncol_vs_ncol_global(
         )
 
     # Regiones compactas
-    for info in filas_leyenda:
+    for info in filas_leyenda_regiones:
 
         texto_nombre = TextArea(
             info["nombre"],
@@ -4143,13 +4404,13 @@ def plot_ncol_vs_ncol_global(
                 rf"$m={info['slope']:.2f}"
                 rf"\pm{info['slope_err']:.2f}$"
             ),
-            textprops={
-                "color": "black",
-                "fontsize": 12,
+        textprops={
+            "color": "black",
+            "fontsize": 12,
             },
         )
 
-        filas.append(
+        filas_regiones.append(
             HPacker(
                 children=[
                     texto_nombre,
@@ -4161,7 +4422,79 @@ def plot_ncol_vs_ncol_global(
             )
         )
 
-    # Ajuste global
+
+    if filas_regiones:
+
+        contenido_regiones = VPacker(
+            children=filas_regiones,
+            align="left",
+            pad=0,
+            sep=4,
+        )
+
+        leyenda_regiones = AnchoredOffsetbox(
+            loc="upper left",
+            child=contenido_regiones,
+            pad=0.5,
+            borderpad=0.8,
+            frameon=True,
+        )
+
+        leyenda_regiones.patch.set_facecolor(
+            "white"
+        )
+
+        leyenda_regiones.patch.set_alpha(
+            0.8
+        )
+
+        ax.add_artist(
+            leyenda_regiones
+        )
+
+
+    # ========================================================
+    # LEYENDA 2: AJUSTES DE GRUPOS Y GLOBALES
+    # ========================================================
+
+    filas_ajustes = []
+
+    for info in filas_leyenda_ajustes:
+
+        texto_nombre = TextArea(
+            info["nombre"],
+            textprops={
+                "color": info["color"],
+                "fontsize": 12,
+            },
+        )
+    
+        texto_ajuste = TextArea(
+            (
+                rf"   $\rho={info['rho']:.2f}$, "
+                rf"$m={info['slope']:.2f}"
+                rf"\pm{info['slope_err']:.2f}$"
+            ),
+            textprops={
+                "color": "black",
+                "fontsize": 12,
+            },
+        )
+
+        filas_ajustes.append(
+            HPacker(
+                children=[
+                    texto_nombre,
+                    texto_ajuste,
+                ],
+                align="baseline",
+                pad=0,
+                sep=2,
+            )
+        )
+
+
+    # Ajuste conjunto de todas las regiones compactas
     if fila_ajuste_global is not None:
 
         texto_nombre = TextArea(
@@ -4187,7 +4520,7 @@ def plot_ncol_vs_ncol_global(
             },
         )
 
-        filas.append(
+        filas_ajustes.append(
             HPacker(
                 children=[
                     texto_nombre,
@@ -4198,34 +4531,35 @@ def plot_ncol_vs_ncol_global(
                 sep=2,
             )
         )
+    
 
-    if filas:
-
-        contenido_leyenda = VPacker(
-            children=filas,
+    if filas_ajustes:
+    
+        contenido_ajustes = VPacker(
+            children=filas_ajustes,
             align="left",
             pad=0,
             sep=4,
         )
 
-        leyenda = AnchoredOffsetbox(
-            loc="upper left",
-            child=contenido_leyenda,
+        leyenda_ajustes = AnchoredOffsetbox(
+            loc="lower right",
+            child=contenido_ajustes,
             pad=0.5,
             borderpad=0.8,
             frameon=True,
         )
 
-        leyenda.patch.set_facecolor(
+        leyenda_ajustes.patch.set_facecolor(
             "white"
         )
 
-        leyenda.patch.set_alpha(
+        leyenda_ajustes.patch.set_alpha(
             0.92
         )
 
         ax.add_artist(
-            leyenda
+            leyenda_ajustes
         )
 
     ax.grid(
@@ -4369,7 +4703,10 @@ else:
         )
 # %%
             
-
+moleculas_matriz = [
+    m for m in moleculas
+    if m != "OC-13-S"
+]
 # ============================================================
 # FIGURA MATRIZ DE CORRELACIÓN
 # ============================================================
@@ -4385,6 +4722,11 @@ def plot_matriz_correlacion_cores(
     Genera una matriz triangular inferior de correlaciones
     de Spearman entre las densidades de columna moleculares.
     """
+
+    labels_matriz = [
+        label_molecula(molecula)
+        for molecula in moleculas
+        ]
 
     matriz, matriz_npix = (
         calcular_matriz_correlacion_cores(
@@ -4490,7 +4832,7 @@ def plot_matriz_correlacion_cores(
                 texto,
                 ha="center",
                 va="center",
-                fontsize=11,
+                fontsize=14,
                 fontweight="bold",
                 color=color_texto,
             )
@@ -4512,27 +4854,73 @@ def plot_matriz_correlacion_cores(
     )
 
     ax.set_xticklabels(
-        moleculas,
+        labels_matriz,
         rotation=45,
         ha="right",
-        fontsize=11,
-    )
+        fontsize=16,
+        )
 
     ax.set_yticklabels(
-        moleculas,
-        fontsize=11,
-    )
+        labels_matriz,
+        fontsize=16,
+        )
 
     ax.tick_params(
         length=0
     )
 
-    ax.set_title(
-        titulo,
-        fontsize=16,
-        pad=18,
-    )
 
+
+    if titulo == "All compact regions":
+
+        texto_correlacion = (
+            "Correlations calculated using the column densities\n"
+            "of pixels within all compact regions."
+        )
+
+    else:
+
+        # Convertimos "mm31 + d2 + mm14"
+        # en "mm31, d2, and mm14"
+        nombres = [
+            nombre.strip()
+            for nombre in titulo.split("+")
+        ]
+
+        if len(nombres) == 1:
+
+            texto_cores = nombres[0]
+
+        elif len(nombres) == 2:
+
+            texto_cores = (
+                f"{nombres[0]} and {nombres[1]}"
+            )
+
+        else:
+
+            texto_cores = (
+                ", ".join(nombres[:-1])
+                + f", and {nombres[-1]}"
+            )
+
+        texto_correlacion = (
+            "Correlations calculated using the column densities\n"
+                "of pixels within the compact regions\n"
+            f"{texto_cores}."
+        )
+
+
+    ax.text(
+        0.58,
+        0.86,
+        texto_correlacion,
+        transform=ax.transAxes,
+        ha="center",
+        va="center",
+        fontsize=20,
+    )
+    
     # Quitamos bordes exteriores
     for spine in ax.spines.values():
         spine.set_visible(
@@ -4552,11 +4940,11 @@ def plot_matriz_correlacion_cores(
 
     cbar.set_label(
         r"Spearman $\rho$",
-        fontsize=13,
+        fontsize=16,
     )
 
     cbar.ax.tick_params(
-        labelsize=11
+        labelsize=13
     )
 
     fig.tight_layout()
@@ -4610,13 +4998,9 @@ ruta_matrices = (
     / "matrices_correlacion"
 )
 
-# ============================================================
-# TODOS LOS CORES
-# ============================================================
-
 resultado_matriz_all = (
     plot_matriz_correlacion_cores(
-        moleculas=moleculas,
+        moleculas=moleculas_matriz,
         cores_seleccionados=(
             GRUPOS_MATRIZ_CORRELACION[
                 "all_cores"
@@ -4638,7 +5022,7 @@ resultado_matriz_all = (
 
 resultado_matriz_irs2 = (
     plot_matriz_correlacion_cores(
-        moleculas=moleculas,
+        moleculas=moleculas_matriz,
         cores_seleccionados=(
             GRUPOS_MATRIZ_CORRELACION[
                 "mm31_d2_mm14"
