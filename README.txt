@@ -323,10 +323,3 @@ Laboratory molecular spectroscopy catalogue (JPL).
 When using this code or its results, please cite the relevant software,
 catalogues, observational data, and scientific publications associated with
 the analysis.
-
-
-License
--------
-
-No software license is specified in this repository yet. Add a LICENSE file
-before allowing reuse or redistribution by third parties.
