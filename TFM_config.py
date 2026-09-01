@@ -1561,8 +1561,8 @@ REGION_LINE_CONFIG = {
                 219951,
                 232237,
             ] * u.MHz,
-            "CH3O-18-H": [231736, 231687, 231788] * u.MHz,
-            "C-13-H3CN": [231799, 231955] * u.MHz,
+            "CH3O-18-H": [231758,231736, 231687, 231788] * u.MHz,
+            "C-13-H3CN": [231799, 231955, 232164] * u.MHz,
             "CH3NCO": [] * u.MHz,
             "CH3CN-15": [] * u.MHz,
             "C-13-H3OH": [] * u.MHz,
@@ -2059,7 +2059,7 @@ REGION_LINE_CONFIG = {
             "C2H5OH_g_B3": [] * u.MHz,
             "C2H5CN": [] * u.MHz,
             "CH3OH_v0": [232783] * u.MHz,
-            "CH3OH_v1": [232629, 232419, 232625] * u.MHz,
+            "CH3OH_v1": [232629, 232419, 232625, 233121] * u.MHz,
             "CH3CHO_v0": [231506] * u.MHz,
             "CH3OCHO_v0": [233213] * u.MHz,
             "CH3OCHO_v1": [
@@ -2571,7 +2571,7 @@ REGION_LINE_CONFIG = {
         },
 
         "diagrot_no_considerar": {
-            "C2H5OH_g": [] * u.MHz,
+            "C2H5OH_g": [232597] * u.MHz,
             "C2H5OH_anti": [] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
             "C2H5CN": [] * u.MHz,
@@ -3603,7 +3603,7 @@ REGION_LINE_CONFIG = {
         },
 
         "diagrot_no_considerar": {
-            "C2H5OH_g": [] * u.MHz,
+            "C2H5OH_g": [232597] * u.MHz,
             "C2H5OH_anti": [] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
             "C2H5CN": [] * u.MHz,
