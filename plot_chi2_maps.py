@@ -17,9 +17,9 @@ import astropy.units as u
 # ============================================================
 
 REGION = "mm31_d2"
-MOLECULA = "C2H5OH_anti"
-# MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v_t=0$"
-MOLECULA_LABEL = r"$\mathrm{anti-C_2H_5OH}$"
+MOLECULA = "CH3OH_v0"
+MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v=0$"
+# MOLECULA_LABEL = r"$\mathrm{anti-C_2H_5OH}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
 # MOLECULA_LABEL = r"$\mathrm{C_2H_5CN}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3CN}$"
@@ -382,12 +382,21 @@ def dibujar_beam(
         width=beam_width,
         height=beam_height,
         angle=90 + bpa,
-        facecolor=color,
-        edgecolor=edgecolor,
-        linewidth=1.5,
+        facecolor="none",      # transparente
+        edgecolor="white",
+        linewidth=2.0,
         zorder=30,
-    )
+        )
 
+    beam.set_path_effects([
+        pe.Stroke(
+            linewidth=3.5,
+            foreground="black"
+            ),
+        pe.Normal()
+        ])
+
+    
     ax.add_patch(beam)
 
 def dibujar_regiones_mapa(
