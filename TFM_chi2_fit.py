@@ -276,7 +276,7 @@ def minimchi2(
                             plt.axvline(f)
                     
                         plt.legend()
-                        plt.show()
+                        plt.close()
                     
 
         i_min, j_min = np.unravel_index(np.argmin(chi2_map), chi2_map.shape)
@@ -404,7 +404,7 @@ def minimchi2(
         plt.title(fr'Mapa de $\chi^2$ para la molécula {mol}')
 
         plt.legend(handles=labels_legend)
-        plt.show()
+        plt.close()
 
 
 
