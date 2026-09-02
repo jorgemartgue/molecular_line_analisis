@@ -500,13 +500,18 @@ def spec_sint_class(T_ex, N_col, molecula, intervalo1, id_splat1, filtro_estruct
             if name_window == 'B6-SPW7':
 
                 intervalos_zoom = [
-                    (231450, 231750),
-                    (231725, 232050),
-                    (232025, 232350),
-                    (232325, 232650),
-                    (232625, 233000),
-                    (232975, 233350)
-                ]
+                        (231450, 231650),
+                        (231625, 231825),
+                        (231800, 232000),
+                        (231975, 232175),
+                        (232150, 232350),
+                        (232325, 232525),
+                        (232500, 232700),
+                        (232675, 232875),
+                        (232850, 233050),
+                        (233025, 233225),
+                        (233200, 233350),
+                        ]
 
                 for xmin, xmax in intervalos_zoom:
                     plt.figure()
@@ -1020,112 +1025,431 @@ def spec_sint_opacidad(
                 
             
         elif generar_plots:
-            
-            if name_window == 'B6-SPW7':
-                
+
+            # =========================================================
+            # INTERVALOS
+            # =========================================================
+
+            if name_window == "B6-SPW7":
+
                 intervalos_zoom = [
-                    (231450, 231750),
-                    (231725, 232050),
-                    (232025, 232350),
-                    (232325, 232650),
-                    (232625, 233000),
-                    (232975, 233350)
+                    (231450, 231570),
+                    (231560, 231680),
+                    (231670, 231790),
+                    (231780, 231900),
+                    (231890, 232010),
+                    (232000, 232120),
+                    (232110, 232230),
+                    (232220, 232340),
+                    (232330, 232450),
+                    (232440, 232560),
+                    (232550, 232670),
+                    (232660, 232780),
+                    (232770, 232890),
+                    (232880, 233000),
+                    (232990, 233110),
+                    (233100, 233220),
+                    (233210, 233350),
                 ]
-                
-                for xmin, xmax in intervalos_zoom:
-                    
-                    mask_zoom = ((xmin <= frec_vent.value) & 
-                                 (frec_vent.value <= xmax))
-                    frec_zoom = frec_vent[mask_zoom]
-                    espec_zoom = espec_vent[mask_zoom]
-                    model_zoom = modelo[name_window][mask_zoom]
-                    
-                    plt.figure()
-                    
-                    plt.plot([],[], ' ',
-                             label = f'{name_window} // Modelo Completo')
-                    
-                    plt.plot(frec_zoom, espec_zoom, 'b', drawstyle='steps-mid',
-                             label = 'Espectro observado')
-                    
-                    plt.plot(frec_zoom, model_zoom, 'r', drawstyle='steps-mid',
-                             label = 'Espectro sintético')
-                    
-                    for mol in tab_lineas_plot:
-                        
-                        for flin, labellin in zip(tab_lineas_plot[mol]['freq'],
-                                                tab_lineas_plot[mol]['label']):
-                            
-                            if xmin <= flin.value <= xmax:
-                                
-                                plt.axvline(flin.value, color = 'k', 
-                                            linestyle = ':', alpha = 0.5)
-                                
-                                plt.text(flin.value - 2, 
-                                         np.max(espec_zoom.value), 
-                                         labellin, rotation = 90, fontsize = 8,
-                                         ha = 'center', va =  'top')
-                    
-                    plt.xlabel('Frecuencia (MHz)')
-                    plt.ylabel('Temperatura de brillo (K)')
-                    
-                    plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
-                               borderaxespad=0)
-                    
-                    filename = (
-                        f"{_safe_name(plot_prefix)}_"
-                        f"{_safe_name(name_window)}_"
-                        f"{int(xmin)}_{int(xmax)}_"
-                        "model_opacidad.pdf"
+
+            else:
+
+                # Para el resto de SPW, por ahora usamos
+                # el intervalo completo.
+                intervalos_zoom = [
+                    (
+                        np.min(
+                            frec_vent.to_value(u.MHz)
+                        ),
+                        np.max(
+                            frec_vent.to_value(u.MHz)
+                        ),
+                    )
+                ]
+
+            # =========================================================
+            # COLORES DE LAS MOLÉCULAS
+            # =========================================================
+
+            cmap = plt.get_cmap("tab10")
+
+            colores_moleculas = {}
+
+            for i, mol in enumerate(tab_lineas_plot.keys()):
+            
+                color_base = cmap(i % 10)
+            
+                colores_moleculas[mol] = (
+                    0.55 * color_base[0],
+                    0.55 * color_base[1],
+                    0.55 * color_base[2],
+                )
+
+            # =========================================================
+            # PLOT
+            # =========================================================
+
+            for xmin, xmax in intervalos_zoom:
+
+                mask_zoom = (
+                    (
+                        xmin
+                        <= frec_vent.to_value(u.MHz)
+                    )
+                    & (
+                        frec_vent.to_value(u.MHz)
+                        <= xmax
+                    )
+                )
+
+                frec_zoom = frec_vent[
+                    mask_zoom
+                ]
+
+                espec_zoom = espec_vent[
+                    mask_zoom
+                ]
+
+                model_zoom = modelo[
+                    name_window
+                ][mask_zoom]
+
+                if len(frec_zoom) == 0:
+                    continue
+
+                plt.figure(
+                    figsize=(9, 5.5)
+                )
+
+                # -----------------------------------------------------
+                # ESPECTROS
+                # -----------------------------------------------------
+
+                plt.plot(
+                    frec_zoom.to_value(
+                        u.MHz
+                    ),
+                    espec_zoom.to_value(
+                        u.K
+                    ),
+                    "b",
+                    drawstyle="steps-mid",
+                    label="Observed spectrum",
+                )
+
+                plt.plot(
+                    frec_zoom.to_value(
+                        u.MHz
+                    ),
+                    model_zoom.to_value(
+                        u.K
+                    ),
+                    "r",
+                    drawstyle="steps-mid",
+                    label="Synthetic spectrum",
+                )
+
+                # =====================================================
+                # LÍNEAS DE ESTE INTERVALO
+                # =====================================================
+
+                lineas_zoom = []
+
+                for mol in tab_lineas_plot:
+
+                    for flin, labellin in zip(
+                        tab_lineas_plot[mol][
+                            "freq"
+                        ],
+                        tab_lineas_plot[mol][
+                            "label"
+                        ],
+                    ):
+
+                        freq_mhz = (
+                            u.Quantity(
+                                flin
+                            ).to_value(
+                                u.MHz
+                            )
+                        )
+
+                        if (
+                            xmin
+                            <= freq_mhz
+                            <= xmax
+                        ):
+
+                            lineas_zoom.append(
+                                (
+                                    freq_mhz,
+                                    labellin,
+                                    mol,
+                                )
+                            )
+
+                lineas_zoom.sort(
+                    key=lambda x: x[0]
+                )
+
+                # =====================================================
+                # RANGO VERTICAL
+                # =====================================================
+
+                ymin = np.nanmin(
+                    np.concatenate(
+                        [
+                            espec_zoom.to_value(
+                                u.K
+                            ),
+                            model_zoom.to_value(
+                                u.K
+                            ),
+                        ]
+                    )
+                )
+
+                ymax_datos = np.nanmax(
+                    np.concatenate(
+                        [
+                            espec_zoom.to_value(
+                                u.K
+                            ),
+                            model_zoom.to_value(
+                                u.K
+                            ),
+                        ]
+                    )
+                )
+
+                rango_y = (
+                    ymax_datos
+                    - ymin
+                )
+
+                if rango_y <= 0:
+                    rango_y = 1.0
+
+                # Bastante hueco por arriba
+                # para etiquetas + leyenda.
+                ymax_plot = (
+                    ymax_datos
+                    + 0.65 * rango_y
+                )
+
+                plt.ylim(
+                    ymin
+                    - 0.03 * rango_y,
+                    ymax_plot,
+                )
+
+                # =====================================================
+                # ETIQUETAS
+                # =====================================================
+
+                n_niveles = 6
+
+                y_inicio = (
+                    ymax_datos
+                    + 0.06 * rango_y
+                )
+
+                delta_y = (
+                    0.085
+                    * rango_y
+                )
+
+                # Dos etiquetas en el mismo
+                # nivel deben estar suficientemente
+                # separadas.
+                separacion_min = 14.0
+
+                ultima_freq_nivel = [
+                    -np.inf
+                    for _ in range(
+                        n_niveles
+                    )
+                ]
+                offsets_x = [0.0, -3.0,  3.0, -6.0, 6.0, -9.0, 9.0,-12.0,
+                             12.0]
+
+                posiciones_texto = []
+
+                for (
+                    freq_mhz,
+                    labellin,
+                    mol,
+                ) in lineas_zoom:
+
+                    # Línea vertical
+                    plt.axvline(
+                        freq_mhz,
+                        color="0.6",
+                        linestyle=":",
+                        alpha=0.8,
+                        linewidth=0.9,
                     )
 
-                    _save_current_fig(filename)
+                    # ---------------------------------------------
+                    # Buscar una altura donde no haya
+                    # otra etiqueta demasiado cerca.
+                    # ---------------------------------------------
 
-                    if show_plots:
-                        plt.show()
+                    nivel = None
 
-                    plt.close()
-                    
-            else:
-                
-                plt.figure()
-        
-                plt.plot([],[], ' ',
-                         label = f'{name_window} // Modelo Completo')
-                
-                plt.plot(frec_vent, espec_vent, 'b',drawstyle='steps-mid',
-                         label = 'Espectro observado')
-                plt.plot(frec_vent, modelo[name_window], 'r',
-                         drawstyle='steps-mid', label = 'Espectro sintético')
-        
-                for mol in tab_lineas_plot:
-                    
-                    for flin, labellin in zip(tab_lineas_plot[mol]['freq'],
-                                            tab_lineas_plot[mol]['label']):
-                        
-                        if (np.min(frec_vent.value) <= flin.value 
-                            <=np.max(frec_vent.value)):
-                            
-                            plt.axvline(flin.value, color = 'k', 
-                                        linestyle = ':', alpha = 0.5)
-                            
-                            plt.text(flin.value - 2, np.max(espec_vent.value), 
-                                     labellin, rotation = 90, fontsize = 8,
-                                     ha = 'center', va =  'top')
-                            
-                plt.xlabel('Frecuencia (MHz)')
-                plt.ylabel('Temperatura de brillo (K)')
-                
-                plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
-                           borderaxespad=0)
-                
+                    for i_nivel in range(
+                        n_niveles
+                    ):
+
+                        if (
+                            freq_mhz
+                            - ultima_freq_nivel[
+                                i_nivel
+                            ]
+                            >= separacion_min
+                        ):
+
+                            nivel = i_nivel
+                            break
+
+                    # Si están todos ocupados,
+                    # usamos el superior.
+                    if nivel is None:
+                        nivel = (
+                            n_niveles
+                            - 1
+                        )
+
+                    ultima_freq_nivel[
+                        nivel
+                    ] = freq_mhz
+
+                    y_texto = (
+                        y_inicio
+                        + nivel
+                        * delta_y
+                    )
+
+                    x_texto = freq_mhz
+
+                    for offset in offsets_x:
+
+                        candidato = freq_mhz + offset
+
+                        # No sacar la etiqueta fuera del panel
+                        if candidato <= xmin + 2:
+                            continue
+
+                        if candidato >= xmax - 2:
+                            continue
+
+                        posicion_libre = True
+
+                        for x_anterior, y_anterior in posiciones_texto:
+
+                            # Si están casi a la misma altura,
+                            # exigimos bastante separación horizontal
+                            if abs(y_texto - y_anterior) < 0.12 * rango_y:
+
+                                if abs(candidato - x_anterior) < 6.0:
+                                    posicion_libre = False
+                                    break
+
+                            # Incluso a distinta altura evitamos
+                            # posiciones prácticamente coincidentes
+                            elif abs(candidato - x_anterior) < 2.5:
+                                posicion_libre = False
+                                break
+
+                        if posicion_libre:
+                            x_texto = candidato
+                            break
+
+                    posiciones_texto.append(
+                        (
+                            x_texto,
+                            y_texto,
+                        )
+                    )
+
+                    plt.annotate(
+                        labellin,
+                        xy=(
+                            freq_mhz,
+                            y_inicio - 0.02 * rango_y,
+                        ),
+                        xytext=(
+                            x_texto,
+                            y_texto,
+                        ),
+                        textcoords="data",
+                        rotation=90,
+                        fontsize=9,
+                        color=colores_moleculas[mol],
+                        alpha=1.0,
+                        ha="center",
+                        va="bottom",
+                        fontweight="bold",
+                        zorder=10,
+                        arrowprops=dict(
+                            arrowstyle="-",
+                            color=colores_moleculas[mol],
+                            linewidth=0.9,
+                            alpha=1.0,
+                        ),
+                    )
+
+                # =====================================================
+                # EJES Y LEYENDA
+                # =====================================================
+
+                plt.xlim(
+                    xmin,
+                    xmax,
+                )
+
+                plt.xlabel(
+                    "Frequency (MHz)"
+                )
+
+                plt.ylabel(
+                    "Brightness temperature (K)"
+                )
+
+                plt.ticklabel_format(
+                    axis="x",
+                    style="plain",
+                    useOffset=False,
+                )
+
+                plt.legend(
+                    loc="best",
+                    title=(
+                        f"{name_window} "
+                        "// Complete model"
+                    ),
+                    frameon=True,
+                    framealpha=0.95,
+                    fontsize=9,
+                    title_fontsize=9,
+                )
+
+                plt.tight_layout()
+
+                # =====================================================
+                # GUARDADO
+                # =====================================================
+
                 filename = (
                     f"{_safe_name(plot_prefix)}_"
                     f"{_safe_name(name_window)}_"
+                    f"{int(xmin)}_{int(xmax)}_"
                     "model_opacidad.pdf"
                 )
 
-                _save_current_fig(filename)
+                _save_current_fig(
+                    filename
+                )
 
                 if show_plots:
                     plt.show()

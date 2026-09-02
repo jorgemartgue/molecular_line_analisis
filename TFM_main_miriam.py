@@ -1466,13 +1466,13 @@ def procesar_molecula(MOLECULA):
             dict_cubos_med=dict_cubos_med,
             fuente_parametros="chi2",
             modelo_radiativo="opacidad",
-            plot_lineas=True,
+            plot_lineas=False,
             show_plots=MOSTRAR_PLOTS,
             save_plots=True,
             guardar_solo_final=True,
             v_pik_dict=v_pik_dict,
             dict_sigma=dict_sigma_vent,
-            nsigma_lineas=3.0,
+            nsigma_lineas=6.0,
             intervalos_mol_region=INTERVALOS_MOL_REGION,
         )
 
