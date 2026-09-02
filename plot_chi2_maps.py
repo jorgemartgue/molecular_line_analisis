@@ -17,9 +17,9 @@ import astropy.units as u
 # ============================================================
 
 REGION = "mm31_d2"
-MOLECULA = "CH3OH_v0"
-MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v=0$"
-# MOLECULA_LABEL = r"$\mathrm{anti-C_2H_5OH}$"
+MOLECULA = "C2H5OH_g"
+# MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v=0$"
+MOLECULA_LABEL = r"$\mathrm{g-C_2H_5OH}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
 # MOLECULA_LABEL = r"$\mathrm{C_2H_5CN}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3CN}$"

@@ -825,45 +825,6 @@ def plot_logN_por_region(dict_Ncol):
                 zorder=0,
             )
 
-        # ============================================================
-        # Comparación con Sgr B2(N2) - Belloche et al. (2025)
-        # ============================================================
-
-        N_CH3OH_SGRB2 = {
-    'N2b':    8.0e19,
-    'AN02':   3.5e19,
-    'AN03':   3.4e19,
-    'AN06c2': 6.0e18,
-    'AN06':   2.3e19,
-}
-
-        if 'CH3OH_v0' in moleculas:
-        
-            idx_ch3oh = moleculas.index('CH3OH_v0')
-            x_ch3oh = x[idx_ch3oh]
-        
-            offsets_lit = np.linspace(
-                -0.65,
-                0.65,
-                len(N_CH3OH_SGRB2)
-            )
-        
-            for offset, (fuente, N_lit) in zip(
-                offsets_lit,
-                N_CH3OH_SGRB2.items()
-            ):
-        
-                axes[0].scatter(
-                    x_ch3oh + offset,
-                    np.log10(N_lit),
-                    marker='D',
-                    s=140,
-                    edgecolor='black',
-                    linewidth=1.2,
-                    zorder=10,
-                    label='Sgr B2(N2), Belloche+25' if fuente == 'N2b' else None
-                )
-
         ax.set_ylim(13, 20.2)
         ax.set_yticks([13, 14, 15, 16, 17, 18, 19, 20]) 
         ax.tick_params(

@@ -181,15 +181,15 @@ FORMULAS_MOLECULAS = {
     ),
 
     "C2H5OH_anti": (
-        r"\mathrm{anti-C_2H_5OH}"
+        r"\mathrm{a-C_2H_5OH}"
     ),
 
     "C2H5OH_g": (
-        r"\mathrm{gauche-C_2H_5OH}"
+        r"\mathrm{g-C_2H_5OH}"
     ),
 
     "CH3CHO_v0": (
-        r"\mathrm{CH_3CHO}\;(v_t=0)"
+        r"\mathrm{CH_3CHO}\;(v=0)"
     ),
 
     "CH3CN": (
@@ -205,7 +205,7 @@ FORMULAS_MOLECULAS = {
     ),
 
     "CH3OCHO_v0": (
-        r"\mathrm{CH_3OCHO}\;(v_t=0)"
+        r"\mathrm{CH_3OCHO}\;(v=0)"
     ),
 
     "CH3OCHO_v1": (
@@ -213,7 +213,7 @@ FORMULAS_MOLECULAS = {
     ),
 
     "CH3OH_v0": (
-        r"\mathrm{CH_3OH}\;(v_t=0)"
+        r"\mathrm{CH_3OH}\;(v=0)"
     ),
 
     "CH3OH_v1": (
@@ -4772,7 +4772,7 @@ def plot_matriz_correlacion_cores(
         )
     )
 
-    cmap = plt.cm.seismic.copy()
+    cmap = plt.cm.RdGy_r.copy()
 
     cmap.set_bad(
         color="white"
@@ -4813,8 +4813,8 @@ def plot_matriz_correlacion_cores(
                     f"{valor:.2f}"
                 )
 
-            # Texto blanco en correlaciones intensas
-            if abs(valor) >= 0.65 or abs(valor) <= 0.55:
+          
+            if abs(valor) >= 0.65 or abs(valor) <= 0.45:
 
                 color_texto = (
                     "white"
