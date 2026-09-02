@@ -21,7 +21,11 @@ from pathlib import Path
 import numpy as np
 from astropy import units as u
 import TFM_config as cfg
-
+from TFM_storage import (
+    load_opacity_results,
+    save_opacity_results,
+    update_opacity_result,
+)
 from TFM_runtime import _resolve_name, resolve_intervalo_region
 from TFM_synthetic_model import spec_sint_class, spec_sint_opacidad
 
@@ -90,6 +94,39 @@ def normalizar_lista_moleculas(moleculas):
         return [moleculas], False
 
     return list(moleculas), True
+
+def seleccionar_linea_opacidad_maxima(tab_lineas):
+    """
+    Selecciona la transición individual con mayor opacidad.
+    """
+
+    if len(tab_lineas) == 0:
+        raise ValueError(
+            "La tabla de líneas del modelo sintético está vacía."
+        )
+
+    tau = np.asarray(
+        np.ma.filled(
+            tab_lineas["tau"],
+            np.nan,
+        ),
+        dtype=float,
+    )
+
+    indices_validos = np.where(
+        np.isfinite(tau)
+    )[0]
+
+    if len(indices_validos) == 0:
+        raise ValueError(
+            "No hay valores válidos de opacidad en la tabla."
+        )
+
+    indice_tau_maxima = indices_validos[
+        np.argmax(tau[indices_validos])
+    ]
+
+    return tab_lineas[indice_tau_maxima]
 
 
 def obtener_T_N_molecula(
@@ -190,7 +227,7 @@ def path_synthetic_fig_dir(region_name, moleculas,
         folder_name = "complete_model"
     else:
         folder_name = mols[0]
-
+    
     if modelo_radiativo == "delgado":
         modelo_folder = "opticamente_delgado"
     elif modelo_radiativo == "opacidad":
@@ -360,6 +397,9 @@ def calcular_modelo_sintetico_molecula(
         f"[spec_sint] Calculando modelo sintético para {molecula} "
         f"usando fuente_parametros='{fuente_parametros}'"
     )
+    
+    linea_max_tau = None
+    path_tabla_opacidad = None
 
     if modelo_radiativo == "delgado":
 
@@ -431,6 +471,38 @@ def calcular_modelo_sintetico_molecula(
         save_dir=save_dir,
         plot_prefix=plot_prefix,
     )
+        
+        linea_max_tau = seleccionar_linea_opacidad_maxima(
+            tab_lineas
+            )
+
+        tau_maxima = float(
+            linea_max_tau["tau"]
+            )
+
+        print(
+            f"[opacidad] {molecula}: "
+            f"Eu = {linea_max_tau['upper_state_energy_K']:.2f} K, "
+            f"tau = {tau_maxima:.4f}"
+            )
+
+        if fuente_parametros == "chi2":
+
+            tab_opacidad = load_opacity_results(
+                region_name
+            )
+
+            tab_opacidad = update_opacity_result(
+                tab_opacidad=tab_opacidad,
+                molecula=molecula,
+                region_name=region_name,
+                linea_max_tau=linea_max_tau,
+            )
+
+            path_tabla_opacidad = save_opacity_results(
+                tab_opacidad=tab_opacidad,
+                region_name=region_name,
+            )
 
     else:
         raise ValueError(
@@ -447,7 +519,16 @@ def calcular_modelo_sintetico_molecula(
         "parametros": params,
         "save_dir": save_dir,
         "modelo_radiativo": modelo_radiativo,
-    }
+
+        # Transición de menor Eu y su opacidad
+        "linea_max_tau": linea_max_tau,
+        "tau_linea_max_tau": (
+            None
+            if linea_max_tau is None
+            else float(linea_max_tau["tau"])
+            ),
+        "path_tabla_opacidad": path_tabla_opacidad,
+        }
 
 
 # ============================================================

@@ -457,6 +457,178 @@ def save_chi2_results(resultados, path):
 
     save_table(tab, path)
 
+def path_opacity_results(region_name, base_dir=None):
+    """
+    Ruta de la tabla de opacidades de una región.
+    """
+
+    if base_dir is None:
+        base_dir = cfg.rutachi2
+
+    path_dir = Path(base_dir) / region_name
+    path_dir.mkdir(parents=True, exist_ok=True)
+
+    return path_dir / "opacidades_chi2.ecsv"
+
+
+def create_empty_opacity_table():
+    """
+    Crea una tabla de opacidades vacía.
+    """
+
+    return QTable(
+        names=[
+            "molecula",
+            "region",
+            "Eu",
+            "frecuencia",
+            "tau",
+            "sijmu2",
+            "transicion",
+            "descripcion",
+        ],
+        dtype=[
+            "U100",
+            "U100",
+            "f8",
+            "f8",
+            "f8",
+            "f8",
+            "U200",
+            "U50",
+        ],
+        units=[
+            None,
+            None,
+            u.K,
+            u.MHz,
+            None,
+            u.D**2,
+            None,
+            None,
+        ],
+    )
+
+
+def load_opacity_results(region_name, base_dir=None):
+    """
+    Carga la tabla de opacidades de una región.
+    """
+
+    path = path_opacity_results(
+        region_name,
+        base_dir=base_dir,
+    )
+
+    if path.exists():
+        return QTable.read(
+            path,
+            format="ascii.ecsv",
+        )
+
+    return create_empty_opacity_table()
+
+
+def save_opacity_results(
+        tab_opacidad,
+        region_name,
+        base_dir=None):
+    """
+    Guarda la tabla de opacidades de una región.
+    """
+
+    path = path_opacity_results(
+        region_name,
+        base_dir=base_dir,
+    )
+
+    tab_opacidad.write(
+        path,
+        format="ascii.ecsv",
+        overwrite=True,
+    )
+
+    print(
+        f"[opacidad] Tabla guardada en: {path}"
+    )
+
+    return path
+
+def update_opacity_result(
+        tab_opacidad,
+        molecula,
+        region_name,
+        linea_max_tau):
+    """
+    Añade o actualiza la opacidad de una molécula.
+
+    Si la molécula ya aparece en la tabla, sustituye su fila
+    para evitar duplicados al recalcular el modelo.
+    """
+
+    Eu = linea_max_tau["upper_state_energy_K"]
+    frecuencia = linea_max_tau["orderedfreq"]
+    tau = linea_max_tau["tau"]
+
+    if "sijmu2" in linea_max_tau.colnames:
+        sijmu2 = linea_max_tau["sijmu2"]
+    else:
+        sijmu2 = np.nan
+
+    if "resolved_QNs" in linea_max_tau.colnames:
+        transicion = str(
+            linea_max_tau["resolved_QNs"]
+        )
+    else:
+        transicion = ""
+
+    if "Descripcion" in linea_max_tau.colnames:
+        descripcion = str(
+            linea_max_tau["Descripcion"]
+        )
+    else:
+        descripcion = ""
+
+    row_values = [
+        str(molecula),
+        str(region_name),
+        float(Eu) * u.K,
+        float(frecuencia) * u.MHz,
+        float(tau),
+        float(sijmu2) * u.D**2,
+        transicion,
+        descripcion,
+    ]
+
+    mask = (
+        tab_opacidad["molecula"] == molecula
+    )
+
+    if np.any(mask):
+
+        indice = np.where(mask)[0][0]
+
+        for columna, valor in zip(
+                tab_opacidad.colnames,
+                row_values):
+
+            tab_opacidad[columna][indice] = valor
+
+        print(
+            f"[opacidad] Resultado actualizado para "
+            f"{molecula}"
+        )
+
+    else:
+
+        tab_opacidad.add_row(row_values)
+
+        print(
+            f"[opacidad] Resultado añadido para "
+            f"{molecula}"
+        )
+
+    return tab_opacidad
 
 def load_chi2_results(path):
     """

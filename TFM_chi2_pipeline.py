@@ -594,10 +594,29 @@ def cargar_o_calcular_chi2_molecula(
                                                          )
 
         return {
-            "molecula": molecula,
-            "resultado": fila,
-            "modelo": modelo_chi2,
-            "calculado": False,
+        "molecula": molecula,
+        "resultado": fila,
+        "modelo": modelo_chi2,
+
+        "linea_max_tau": (
+            None
+            if modelo_chi2 is None
+            else modelo_chi2["linea_max_tau"]
+            ),
+
+        "tau_linea_max_tau": (
+            None
+            if modelo_chi2 is None
+            else modelo_chi2["tau_linea_max_tau"]
+            ),
+
+        "path_tabla_opacidad": (
+            None
+            if modelo_chi2 is None
+            else modelo_chi2["path_tabla_opacidad"]
+            ),
+
+        "calculado": False,
         }
 
     T_init, N_init = obtener_T_N_inicial_diagrot(
@@ -719,9 +738,28 @@ def cargar_o_calcular_chi2_molecula(
         "converged": ajuste["converged"],
         "modelo_fit": ajuste["modelo"],
         "modelo_chi2": modelo_chi2,
+        
+        "linea_max_tau": (
+            None
+            if modelo_chi2 is None
+            else modelo_chi2["linea_max_tau"]
+            ),
+        
+        "tau_linea_max_tau": (
+            None
+            if modelo_chi2 is None
+            else modelo_chi2["tau_linea_max_tau"]
+            ),
+
+        "path_tabla_opacidad": (
+            None
+            if modelo_chi2 is None
+            else modelo_chi2["path_tabla_opacidad"]
+            ),
+
         "config_final": ajuste["config_final"],
         "calculado": True,
-    }
+        }   
 
 def construir_residuo_base_chi2(
         molecula,
