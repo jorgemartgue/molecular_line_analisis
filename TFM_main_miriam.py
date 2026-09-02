@@ -1338,27 +1338,23 @@ def procesar_molecula(MOLECULA):
     print(f"[chi2] T_fit = {resultado_chi2.get('T_fit')}")
     print(f"[chi2] N_fit = {resultado_chi2.get('N_fit')}")
     print(f"[chi2] converged = {resultado_chi2.get('converged')}")
-    tau_linea_menor_Eu = resultado_chi2.get(
-        "tau_linea_menor_Eu"
+    tau_linea_max_tau = resultado_chi2.get(
+        "tau_linea_max_tau"
         )
 
-    linea_menor_Eu = resultado_chi2.get(
-        "linea_menor_Eu"
+    linea_max_tau = resultado_chi2.get(
+        "linea_max_tau"
         )
 
-    path_tabla_opacidad = resultado_chi2.get(
-        "path_tabla_opacidad"
-        )
-
-    if tau_linea_menor_Eu is not None:
+    if tau_linea_max_tau is not None:
         
         print("[chi2] Opacidad de la transición seleccionada:")
         print(
             f"       Eu = "
-            f"{linea_menor_Eu['upper_state_energy_K']:.2f} K"
+            f"{linea_max_tau['upper_state_energy_K']:.2f} K"
             )
         print(
-            f"       tau = {tau_linea_menor_Eu:.4f}"
+            f"       tau = {tau_linea_max_tau:.4f}"
             )
 
     # ============================================================
