@@ -16,11 +16,11 @@ import astropy.units as u
 # CONFIGURACIÓN
 # ============================================================
 
-REGION = "mm31_d2"
-MOLECULA = "C2H5OH_g"
+REGION = "E_NORTH"
+MOLECULA = "CH3OCHO_v1"
 # MOLECULA_LABEL = r"$\mathrm{CH_3OH}\ v=0$"
-MOLECULA_LABEL = r"$\mathrm{g-C_2H_5OH}$"
-# MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
+# MOLECULA_LABEL = r"$\mathrm{g-C_2H_5OH}$"
+MOLECULA_LABEL = r"$\mathrm{CH_3OCHO}\ v_t=1$"
 # MOLECULA_LABEL = r"$\mathrm{C_2H_5CN}$"
 # MOLECULA_LABEL = r"$\mathrm{CH_3CN}$"
 
@@ -56,14 +56,13 @@ BEAM_FITS = (
 # ============================================================
 # ESTILO DE FIGURAS
 # ============================================================
-
-FS_AXIS = 20
-FS_TICKS = 16
+FS_AXIS = 24
+FS_TICKS = 19
+FS_COLORBAR = 20
+FS_COLORBAR_TICKS = 17
 FS_REGION = 18
 FS_METHOD = 17
 FS_PANEL = 19
-FS_COLORBAR = 18
-FS_COLORBAR_TICKS = 15
 FS_MOLECULE = 25
 
 # ------------------------------------------------------------
@@ -606,6 +605,452 @@ def plot_mapa(
 
     plt.show()
 
+def plot_chi2_Tex_Ncol(
+    T_map,
+    N_map,
+    header,
+    percent_min=5,
+    percent_max=95,
+    save_path=None,
+):
+    """
+    Representa juntos los mapas de T_ex y N_col
+    obtenidos mediante el ajuste chi2.
+
+    Panel izquierdo:
+        T_ex [K]
+
+    Panel derecho:
+        log10(N_col [cm^-2])
+    """
+
+    # ========================================================
+    # PREPARAR DATOS
+    # ========================================================
+
+    T_plot = np.array(
+        T_map,
+        dtype=float,
+    )
+
+    N_plot = np.array(
+        N_map,
+        dtype=float,
+    )
+
+    logN_plot = np.where(
+        N_plot > 0,
+        np.log10(N_plot),
+        np.nan,
+    )
+
+    # ========================================================
+    # ESCALAS DE COLOR INDEPENDIENTES
+    # ========================================================
+
+    valores_T = T_plot[
+        np.isfinite(T_plot)
+    ]
+
+    valores_N = logN_plot[
+        np.isfinite(logN_plot)
+    ]
+
+    if (
+        len(valores_T) == 0
+        or len(valores_N) == 0
+    ):
+        print(
+            "[aviso] T_ex o N_col no tienen "
+            "valores válidos."
+        )
+        return
+
+    vmin_T = np.nanpercentile(
+        valores_T,
+        percent_min,
+    )
+
+    vmax_T = np.nanpercentile(
+        valores_T,
+        percent_max,
+    )
+
+    vmin_N = np.nanpercentile(
+        valores_N,
+        percent_min,
+    )
+
+    vmax_N = np.nanpercentile(
+        valores_N,
+        percent_max,
+    )
+
+    # ========================================================
+    # WCS
+    # ========================================================
+
+    wcs = WCS(header).celestial
+
+    # ========================================================
+    # FIGURA
+    # ========================================================
+
+    fig = plt.figure(
+        figsize=(15, 6)
+    )
+
+    ax1 = fig.add_subplot(
+        121,
+        projection=wcs,
+    )
+
+    ax2 = fig.add_subplot(
+        122,
+        projection=wcs,
+    )
+
+    # ========================================================
+    # PANEL a) — T_ex
+    # ========================================================
+
+    im1 = ax1.imshow(
+        T_plot,
+        origin="lower",
+        cmap="inferno",
+        vmin=vmin_T,
+        vmax=vmax_T,
+        interpolation="nearest",
+    )
+
+    dibujar_regiones_mapa(
+        ax1,
+        wcs,
+        REGIONES_MAPA,
+    )
+
+    dibujar_beam(
+        ax1,
+        wcs,
+        HEADER_BEAM,
+    )
+
+    # --------------------------------------------------------
+    # Panel label
+    # --------------------------------------------------------
+
+    ax1.text(
+        0.03,
+        0.96,
+        r"a) $T_{\rm ex}$",
+        transform=ax1.transAxes,
+        ha="left",
+        va="top",
+        fontsize=FS_PANEL,
+        fontweight="bold",
+        color="white",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black",
+            ),
+            pe.Normal(),
+        ],
+    )
+
+    # --------------------------------------------------------
+    # Método
+    # --------------------------------------------------------
+
+    ax1.text(
+        0.96,
+        0.05,
+        r"$\chi^2$ fit",
+        transform=ax1.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=FS_METHOD,
+        color="white",
+        fontweight="bold",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black",
+            ),
+            pe.Normal(),
+        ],
+    )
+
+    # ========================================================
+    # PANEL b) — N_col
+    # ========================================================
+
+    im2 = ax2.imshow(
+        logN_plot,
+        origin="lower",
+        cmap="viridis",
+        vmin=vmin_N,
+        vmax=vmax_N,
+        interpolation="nearest",
+    )
+
+    dibujar_regiones_mapa(
+        ax2,
+        wcs,
+        REGIONES_MAPA,
+    )
+
+    # --------------------------------------------------------
+    # Panel label
+    # --------------------------------------------------------
+
+    ax2.text(
+        0.03,
+        0.96,
+        r"b) $N_{\rm col}$",
+        transform=ax2.transAxes,
+        ha="left",
+        va="top",
+        fontsize=FS_PANEL,
+        fontweight="bold",
+        color="white",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black",
+            ),
+            pe.Normal(),
+        ],
+    )
+
+    # --------------------------------------------------------
+    # Molécula
+    # --------------------------------------------------------
+
+    ax2.text(
+        0.96,
+        0.96,
+        MOLECULA_LABEL,
+        transform=ax2.transAxes,
+        ha="right",
+        va="top",
+        fontsize=FS_MOLECULE,
+        fontweight="bold",
+        color="white",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black",
+            ),
+            pe.Normal(),
+        ],
+    )
+
+    # --------------------------------------------------------
+    # Método
+    # --------------------------------------------------------
+
+    ax2.text(
+        0.96,
+        0.05,
+        r"$\chi^2$ fit",
+        transform=ax2.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=FS_METHOD,
+        color="white",
+        fontweight="bold",
+        zorder=20,
+        path_effects=[
+            pe.Stroke(
+                linewidth=2.5,
+                foreground="black",
+            ),
+            pe.Normal(),
+        ],
+    )
+
+    # ========================================================
+    # COORDENADAS
+    # ========================================================
+
+    for i, ax in enumerate([ax1, ax2]):
+    
+        ra = ax.coords[0]
+        dec = ax.coords[1]
+
+        # ----------------------------------------------------
+        # Labels de los ejes
+        # ----------------------------------------------------
+
+        ra.set_axislabel(
+            "R.A. (J2000)",
+            fontsize=FS_AXIS,
+            minpad=1.0,
+        )
+
+        if i == 0:
+            dec.set_axislabel(
+                "Dec. (J2000)",
+                fontsize=FS_AXIS,
+                minpad=1.0,
+            )
+        else:
+            dec.set_axislabel("")
+
+        # ----------------------------------------------------
+        # Ticks principales
+        # ----------------------------------------------------
+
+        # Menos ticks en R.A. para evitar solapamiento
+        ra.set_ticks(
+            spacing=1.5 * u.arcsec,
+        )
+
+        dec.set_ticks(
+            spacing=0.5 * u.arcsec,
+        )
+
+        # ----------------------------------------------------
+        # Formato
+        # ----------------------------------------------------
+
+        ra.set_major_formatter(
+            "hh:mm:ss.ss"
+        )
+
+        dec.set_major_formatter(
+            "dd:mm:ss.s"
+        )
+
+        # ----------------------------------------------------
+        # Tamaño de los números
+        # ----------------------------------------------------
+
+        ra.set_ticklabel(
+            size=FS_TICKS,
+            exclude_overlapping=True,
+        )
+
+        dec.set_ticklabel(
+            size=FS_TICKS,
+            exclude_overlapping=True,
+        )
+
+        # ----------------------------------------------------
+        # Posición de ticks y labels
+        # ----------------------------------------------------
+    
+        ra.set_ticks_position("bt")
+        dec.set_ticks_position("lr")
+    
+        ra.set_ticklabel_position("b")
+    
+        if i == 0:
+            dec.set_ticklabel_position("l")
+        else:
+            dec.set_ticklabel_visible(False)
+
+        # ----------------------------------------------------
+        # Ticks menores
+        # ----------------------------------------------------
+
+        ra.display_minor_ticks(True)
+        dec.display_minor_ticks(True)
+    
+        ra.set_minor_frequency(2)
+        dec.set_minor_frequency(2)
+
+
+    # ========================================================
+    # ESPACIADO
+    # ========================================================
+
+    plt.subplots_adjust(
+        left=0.07,
+        right=0.90,
+        bottom=0.15,
+        top=0.95,
+        wspace=0.32,
+    )
+
+    # ========================================================
+    # COLORBAR T_ex
+    # ========================================================
+
+    pos1 = ax1.get_position()
+
+    cax1 = fig.add_axes([
+        pos1.x1 + 0.012,
+        pos1.y0,
+        0.012,
+        pos1.height,
+    ])
+
+    cbar1 = fig.colorbar(
+        im1,
+        cax=cax1,
+    )
+
+    cbar1.set_label(
+        r"$T_{\rm ex}$ [K]",
+        fontsize=FS_COLORBAR,
+        labelpad=10,
+    )
+
+    cbar1.ax.tick_params(
+        labelsize=FS_COLORBAR_TICKS,
+    )
+
+    # ========================================================
+    # COLORBAR N_col
+    # ========================================================
+
+    pos2 = ax2.get_position()
+
+    cax2 = fig.add_axes([
+        pos2.x1 + 0.012,
+        pos2.y0,
+        0.012,
+        pos2.height,
+    ])
+
+    cbar2 = fig.colorbar(
+        im2,
+        cax=cax2,
+    )
+
+    cbar2.set_label(
+        r"$\log_{10}(N_{\rm col}\,[{\rm cm}^{-2}])$",
+        fontsize=FS_COLORBAR,
+        labelpad=10,
+    )
+
+    cbar2.ax.tick_params(
+        labelsize=FS_COLORBAR_TICKS,
+    )
+
+    # ========================================================
+    # GUARDAR
+    # ========================================================
+
+    if save_path is not None:
+
+        fig.savefig(
+            save_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+        print(
+            f"[plot] Guardado: {save_path}"
+        )
+
+    plt.show()
 
 def comparar_mapas(
     data1,
@@ -1420,6 +1865,19 @@ plot_mapa(
     ),
 )
 
+# ============================================================
+# T_ex + N_col CHI2
+# ============================================================
+
+plot_chi2_Tex_Ncol(
+    T_fit_map,
+    N_fit_map,
+    header,
+    save_path=(
+        OUT_DIR
+        / f"{MOLECULA}_{REGION}_chi2_Tex_Ncol.pdf"
+    ),
+)
 
 # ============================================================
 # PLOTS DIAGRAMA ROTACIONAL
