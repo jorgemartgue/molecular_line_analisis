@@ -25,10 +25,19 @@ ruta_fits_chi2 = Path("/home/jorge/TFM/maps_28Agosto/chi2")
 ruta_regiones = Path("/home/jorge/TFM/regiones")
 
 REGION = "MM14_MAP"
-MOLECULA = "CH3OCHO_v0"
+MOLECULA = "CH3OH_v1"
 
 # Carpeta concreta de la región y molécula
 ruta_mapas = (ruta_fits_chi2 / REGION / MOLECULA)
+
+ruta_figuras_perfiles = Path(
+    "/home/jorge/TFM/figures/perfiles_radiales"
+)
+
+ruta_figuras_perfiles.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 # Nombres generados por save_chi2_maps_fits()
 rutas_fits = {
@@ -1152,6 +1161,159 @@ def representar_perfil_radial_medio(
 
     return tabla_medias
 
+def representar_Ncol_radio_coloreado_Tex(
+        perfil,
+        nombre_region,
+        molecula,
+        ruta_salida):
+    """
+    Representa Ncol frente al radio para todos los píxeles.
+
+    El color de cada punto indica la temperatura de excitación:
+    azul = menor Tex
+    rojo = mayor Tex
+    """
+
+    # --------------------------------------------------------
+    # Extraer datos
+    # --------------------------------------------------------
+
+    radio = np.asarray(
+        perfil["radio_pixel_arcsec"],
+        dtype=float,
+    )
+
+    T = np.asarray(
+        perfil["T_ex"],
+        dtype=float,
+    )
+
+    N = np.asarray(
+        perfil["N_col"],
+        dtype=float,
+    )
+
+    # --------------------------------------------------------
+    # Seleccionar únicamente píxeles válidos
+    # --------------------------------------------------------
+
+    validos = (
+        np.isfinite(radio)
+        & np.isfinite(T)
+        & np.isfinite(N)
+        & (T > 0)
+        & (N > 0)
+    )
+
+    radio_plot = radio[validos]
+    T_plot = T[validos]
+    N_plot = N[validos]
+
+    if len(radio_plot) == 0:
+        print(
+            f"[perfil_radial] No hay píxeles válidos para "
+            f"{molecula} en {nombre_region}"
+        )
+        return
+
+    # --------------------------------------------------------
+    # Figura
+    # --------------------------------------------------------
+
+    fig, ax = plt.subplots(
+        figsize=(7.5, 5.5),
+        constrained_layout=True,
+    )
+
+    scatter = ax.scatter(
+        radio_plot,
+        N_plot,
+        c=T_plot,
+        cmap="coolwarm",
+        s=38,
+        alpha=0.80,
+        edgecolors="none",
+    )
+
+    # --------------------------------------------------------
+    # Ejes
+    # --------------------------------------------------------
+
+    ax.set_xlabel(
+        "Radius (arcsec)",
+        fontsize=14,
+    )
+
+    ax.set_ylabel(
+        r"$N_{\mathrm{col}}$ (cm$^{-2}$)",
+        fontsize=14,
+    )
+
+    ax.set_yscale(
+        "log"
+    )
+
+    ax.tick_params(
+        axis="both",
+        labelsize=12,
+    )
+
+    ax.grid(
+        alpha=0.20,
+    )
+
+    # --------------------------------------------------------
+    # Barra de color = Tex
+    # --------------------------------------------------------
+
+    cbar = fig.colorbar(
+        scatter,
+        ax=ax,
+        pad=0.02,
+    )
+
+    cbar.set_label(
+        r"$T_{\mathrm{ex}}$ (K)",
+        fontsize=14,
+    )
+
+    cbar.ax.tick_params(
+        labelsize=11,
+    )
+
+    # --------------------------------------------------------
+    # Título
+    # --------------------------------------------------------
+
+    ax.set_title(
+        f"{molecula} — {nombre_region}",
+        fontsize=15,
+    )
+
+    # --------------------------------------------------------
+    # Guardar
+    # --------------------------------------------------------
+
+    ruta_figura = (
+        ruta_salida
+        / f"{molecula}_{nombre_region}_"
+          "Ncol_radio_Tex.pdf"
+    )
+
+    fig.savefig(
+        ruta_figura,
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.show()
+    plt.close(fig)
+
+    print(
+        f"[perfil_radial] Figura Ncol-radio-Tex guardada: "
+        f"{ruta_figura}"
+    )
+
 # ============================================================
 # CALCULAR TODAS LAS REGIONES COMPACTAS
 # ============================================================
@@ -1298,3 +1460,10 @@ for ruta_region in rutas_regiones_compactas:
         f"[perfil_radial] Tabla de medias guardada: "
         f"{ruta_tabla_medias}"
     )
+    
+representar_Ncol_radio_coloreado_Tex(
+    perfil=perfil,
+    nombre_region=nombre_region_compacta,
+    molecula=MOLECULA,
+    ruta_salida=ruta_figuras_perfiles,
+)
