@@ -20,12 +20,12 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy.wcs.utils import proj_plane_pixel_scales
 
-ruta_fits_chi2 = Path("/home/jorge/TFM/maps_21Agosto/maps/chi2")
+ruta_fits_chi2 = Path("/home/jorge/TFM/maps_28Agosto/chi2")
 
 ruta_regiones = Path("/home/jorge/TFM/regiones")
 
-REGION = "mm31_d2"
-MOLECULA = "C2H5CN"
+REGION = "MM14_MAP"
+MOLECULA = "CH3OCHO_v0"
 
 # Carpeta concreta de la región y molécula
 ruta_mapas = (ruta_fits_chi2 / REGION / MOLECULA)
