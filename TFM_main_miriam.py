@@ -1161,24 +1161,27 @@ def procesar_molecula(MOLECULA):
     #     v_pik_dict=v_pik_dict,
     # )
 
-    # modelo_completo_diagrot_opacidad = calcular_modelo_sintetico(
-    #     moleculas=MOLECULAS_MODELO,
-    #     region_name=REGION,
-    #     tab_mol_config=tab_mol_config,
-    #     resultados_parametros=resultados_diagrot,
-    #     fwhm_dict=fwhm_dict,
-    #     dict_T_cont=dict_T_contv2,
-    #     dict_cubos_med=dict_cubos_med,
-    #     fuente_parametros="diagrot",
-    #     modelo_radiativo="opacidad",
-    #     plot_lineas=False,
-    #     show_plots=MOSTRAR_PLOTS,
-    #     save_plots=True,
-    #     guardar_solo_final=True,
-    #     v_pik_dict=v_pik_dict,
-    #     dict_sigma=dict_sigma_vent,
-    #     nsigma_lineas=3.0,
-    # )
+    modelo_completo_diagrot_opacidad = calcular_modelo_sintetico(
+        moleculas=MOLECULAS_MODELO,
+        region_name=REGION,
+        tab_mol_config=tab_mol_config,
+        resultados_parametros=resultados_diagrot,
+        fwhm_dict=fwhm_dict,
+        dict_T_cont=dict_T_contv2,
+        dict_cubos_med=dict_cubos_med,
+        fuente_parametros="diagrot",
+        modelo_radiativo="opacidad",
+        plot_lineas=False,
+        show_plots=MOSTRAR_PLOTS,
+        save_plots=True,
+        guardar_solo_final=True,
+        v_pik_dict=v_pik_dict,
+        dict_sigma=dict_sigma_vent,
+        nsigma_lineas=6.0,
+        intervalos_mol_region=INTERVALOS_MOL_REGION,
+        rutacarp_region=RUTACARP_REGION,
+        rutaregion_region=RUTAREGION_REGION,
+        )
 
     continuar = input('¿Quieres continuar? Siguiente paso, ajuste de chi2 (S/N)')
     
