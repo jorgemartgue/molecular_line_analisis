@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 
-def Q(T_ex, cat_mol, id_cat, deltaTex=None, inc=False, plot = True):
+def Q(T_ex, cat_mol, id_cat, deltaTex=None, inc=False, plot = True, w = 1):
 
     if deltaTex == None and inc is True:
 
@@ -102,9 +102,9 @@ def Q(T_ex, cat_mol, id_cat, deltaTex=None, inc=False, plot = True):
                             (dQ_db * np.sqrt(covQ[1, 1]))**2 +
                             covQ[2, 2] + (dQ_dx * deltaTex.value)**2)
 
-        return Q_Tex_interp, deltQ_Tex
+        return w * Q_Tex_interp, deltQ_Tex
 
-    return Q_Tex_interp
+    return w * Q_Tex_interp
 
 def to_float(col):
     # MaskedColumn -> rellena con nan
@@ -115,7 +115,7 @@ def to_float(col):
 
 def diagrama_rotacional(elemento, id_cat, tab_filtrada1, B0, cat_mol,
                         freq_noconsid=None, plot_Q=True,
-                        save_path=None, plots = True):
+                        save_path=None, plots = True, w = 1.0):
     """
 Parameters
 ----------
@@ -143,7 +143,21 @@ cat_mol : str
 freq_noconsid : array-like of u.Quantity, optional
     List of frequencies to exclude from the rotational diagram.
     Must have units convertible to Hz. Default is None.
+    
+plot_Q : bool
+     If you want to plot the partition function set it as True
 
+save_path: str 
+     In case you want to save the rotational diagram, set 
+     save_path = the directory you want to save the figure
+
+plots: bool
+    Set this parameter to True if you want the function to display the figures.
+    
+w: float
+    Weight applied to the partition function when there are several
+    contributions, as in the case of isotopologues. It is setted as 1.0 
+    
 Returns
 -------
 T_ex : u.Quantity
@@ -231,7 +245,7 @@ Q_Tex : float
 
     #  cálculo de la función de partición
 
-    Q_Tex, deltQ_Tex = Q(T_ex, cat_mol, id_cat, deltaTex, True, plot_Q)
+    Q_Tex, deltQ_Tex = Q(T_ex, cat_mol, id_cat, deltaTex, True, plot_Q, w = w)
     N_col = Q_Tex*np.exp(pol[1])/u.cm**2
 
     # dN_dQ = np.exp(pol[1])
@@ -450,7 +464,8 @@ Q_Tex : float
             deltaN_col.to(1/u.cm**2), pol, Q_Tex)
 
 def diagrama_rot_pixeles(elemento, id_cat, tab_pixeles, B0, cat_mol,
-                         freq_noconsid=None, wcs_ref=None, plots = True):
+                         freq_noconsid=None, wcs_ref=None, plots = True, 
+                         w = 1.0):
     
     ny, nx = tab_pixeles.shape
 
@@ -474,7 +489,7 @@ def diagrama_rot_pixeles(elemento, id_cat, tab_pixeles, B0, cat_mol,
                                               cat_mol,
                                               freq_noconsid=freq_noconsid,
                                               plot_Q=False, save_path=None,
-                                              plots = plots)
+                                              plots = plots, w = w)
 
                 N_col_map[y, x] = N_coltot.to_value(1 / u.cm**2)
                 T_ex_map[y, x] = T_extot.to_value(u.K)

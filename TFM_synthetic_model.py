@@ -17,6 +17,7 @@ from TFM_line_search import mod_vel, abrir_espectro_region
 from TFM_splatalogue_tools import buscador_splatalogue_cdms
 from TFM_filtering import filtrador_tablas
 from TFM_rotational_diagram import Q, to_float
+from TFM_runtime import obtener_peso_Q
 
 def J_nu(nu, T):
     
@@ -267,7 +268,7 @@ def spec_sint_class(T_ex, N_col, molecula, intervalo1, id_splat1, filtro_estruct
             plt.savefig(out, dpi=300, bbox_inches="tight")
             print(f"[spec_sint] Figura guardada en: {out}")
     
-    QT = Q(T_ex, cat_mol, id_cat, plot = False)
+    QT = Q(T_ex, cat_mol, id_cat, plot = False, w= obtener_peso_Q(molecula))
 
     sigma = anch_lin/(2*np.sqrt(2*np.log(2)))
     sigma_freq = (f0 * sigma / c.c.to(u.km/u.s)).to(u.MHz)

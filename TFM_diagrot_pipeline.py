@@ -16,7 +16,7 @@ from astropy.visualization import simple_norm
 import TFM_config as cfg
 from astropy.io import fits
 from TFM_rotational_diagram import diagrama_rotacional
-from TFM_runtime import _resolve_name
+from TFM_runtime import _resolve_name, obtener_peso_Q
 from TFM_storage import load_diagrot_results, save_diagrot_results
 import numpy as np
 
@@ -189,7 +189,8 @@ def calcular_diagrot_molecula(
         cat_mol,
         freq_noconsid=freq_noconsid,
         plot_Q=plot_Q,
-        save_path=save_path, plots = plots
+        save_path=save_path, plots = plots,
+        w = obtener_peso_Q(molecula)
     )
 
     resultado = {
@@ -1017,7 +1018,8 @@ def cargar_o_calcular_diagrot_pixeles(
      Delta_Ncol_map) = diagrama_rot_pixeles(molecula, id_cat, tab_pixeles,
                                             B0, cat_mol,
                                             freq_noconsid=freq_noconsid,
-                                            wcs_ref=wcs_ref, plots = plots)
+                                            wcs_ref=wcs_ref, plots = plots,
+                                            w= obtener_peso_Q(molecula))
 
     # ------------------------------------------------------------
     # Guardar FITS

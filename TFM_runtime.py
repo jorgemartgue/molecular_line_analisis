@@ -2,7 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import TFM_config as cfg
+import math
 
+def obtener_peso_Q(molecula):
+    
+    pesos = getattr(cfg, "pesos_Q_T", {})
+    W = float(pesos.get(molecula, 1.0))
+    
+    if not math.isfinite(W) or W <= 0:
+        raise ValueError(
+            f"Peso de la función de partición no válido para {molecula}: {W}")
+        
+    return W
 
 def _resolve_name(name):
     """

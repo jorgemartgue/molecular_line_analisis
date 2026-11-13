@@ -904,6 +904,36 @@ MOLECULE_CONFIG = {
 }
 
 # =========================
+# PESOS PARA CADA UNA DE LAS MOLÉCULAS PARA CALCULAR LA FUNCIÓN DE PARTICIÓN
+# =========================
+
+pesos_Q_T = {
+    "C2H5OH_g": 2/3,
+    "C2H5OH_anti": 1/3,
+    "C2H5CN": 1.0,
+    "CH3OCHO_v0": 1.0,
+    "CH3OCHO_v1": 1.0,
+    "CH3OH_v0": 1.0,
+    "CH3OH_v1": 1.0,
+    "CH3CHO_v0": 1.0,
+    "CH3OCH3": 1.0,
+    "Acetona": 1.0,
+    "CH3CN": 1.0,
+    "CH3CN_v1": 1.0,
+    "CH3O-18-H": 1.0,
+    "C-13-H3CN": 1.0,
+    "CH3NCO": 1.0,
+    "C-13-H3OH": 1.0,
+    "OC-13-S": 1.0,
+    "CH3CCH_v0": 1.0,
+    "CH3NCO_B3": 1.0,
+    "CH3CCH_v1": 1.0,
+    "CH3OC-13-HO": 1.0,
+    "C2H3CN_v0": 1.0,
+    
+    }
+
+# =========================
 # MOLECULAS QUE NECESITAN FILTRO DIFERENTE A FILTRADOR
 # =========================
 

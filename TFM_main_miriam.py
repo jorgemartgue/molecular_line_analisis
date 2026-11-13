@@ -1192,7 +1192,7 @@ def procesar_molecula(MOLECULA):
     # AJUSTE CHI2 - UNA MOLÉCULA
     # ============================================================
 
-    RECALCULAR_CHI2 = False
+    RECALCULAR_CHI2 = True
 
     print("\n" + "=" * 70)
     print(f"[chi2] Ajuste de molécula: {MOLECULA}")
@@ -1322,7 +1322,7 @@ def procesar_molecula(MOLECULA):
         tab_lineas=tab_lineas_chi2,
         recalcular=RECALCULAR_CHI2,
         n_grid=10,
-        tol=0.5,
+        tol=0.005,
         max_iter=20,
         dict_lin_noconsid=dict_lin_noconsid_chi2,
         model_sint=None,
