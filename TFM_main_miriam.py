@@ -683,7 +683,7 @@ def procesar_molecula(MOLECULA):
     RECALCULAR_DIAGROT = recalcular
     RECALCULAR_DIAGROT_PIXELES = recalcular
 
-    guardar_plots=True
+    guardar_plots=False
 
     resultados_diagrot = cargar_resultados_diagrot_region(REGION)
 
@@ -1106,7 +1106,7 @@ def procesar_molecula(MOLECULA):
         modelo_radiativo="opacidad",
         plot_lineas=True,
         show_plots=MOSTRAR_PLOTS,
-        save_plots=True,
+        save_plots=guardar_plots,
         v_pik_dict=v_pik_dict,
         dict_sigma=dict_sigma_vent,
         nsigma_lineas=3.0,
@@ -1117,32 +1117,32 @@ def procesar_molecula(MOLECULA):
     # MODELO COMPLETO
     # ============================================================
 
-    PATH_DIAGROT_RESULTADOS = (
-        cfg.rutatablas / "diagrot" / REGION / "diagrot_resultados.ecsv"
-    )
+    # PATH_DIAGROT_RESULTADOS = (
+    #     cfg.rutatablas / "diagrot" / REGION / "diagrot_resultados.ecsv"
+    # )
 
-    resultados_diagrot = load_diagrot_results(PATH_DIAGROT_RESULTADOS)
+    # resultados_diagrot = load_diagrot_results(PATH_DIAGROT_RESULTADOS)
 
-    MOLECULAS_MODELO = list(resultados_diagrot.keys())
+    # MOLECULAS_MODELO = list(resultados_diagrot.keys())
 
-    print("[spec_sint] Moléculas disponibles en diagrot:")
-    print(MOLECULAS_MODELO)
+    # print("[spec_sint] Moléculas disponibles en diagrot:")
+    # print(MOLECULAS_MODELO)
 
-    fwhm_dict, v_pik_dict = dicts_calibracion_region(REGION)
+    # fwhm_dict, v_pik_dict = dicts_calibracion_region(REGION)
 
-    faltan_vpik = [m for m in MOLECULAS_MODELO if m not in v_pik_dict]
-    faltan_fwhm = [m for m in MOLECULAS_MODELO if m not in fwhm_dict]
+    # faltan_vpik = [m for m in MOLECULAS_MODELO if m not in v_pik_dict]
+    # faltan_fwhm = [m for m in MOLECULAS_MODELO if m not in fwhm_dict]
 
-    if len(faltan_vpik) > 0 or len(faltan_fwhm) > 0:
-        raise KeyError(
-            "Faltan moléculas calibradas antes de construir el modelo completo.\n"
-            f"Faltan v_pik: {faltan_vpik}\n"
-            f"Faltan FWHM: {faltan_fwhm}\n"
-            "Ejecuta primero la calibración de esas moléculas en esta región."
-        )
+    # if len(faltan_vpik) > 0 or len(faltan_fwhm) > 0:
+    #     raise KeyError(
+    #         "Faltan moléculas calibradas antes de construir el modelo completo.\n"
+    #         f"Faltan v_pik: {faltan_vpik}\n"
+    #         f"Faltan FWHM: {faltan_fwhm}\n"
+    #         "Ejecuta primero la calibración de esas moléculas en esta región."
+    #     )
 
-    print("[spec_sint] v_pik_dict usado:")
-    print(v_pik_dict)
+    # print("[spec_sint] v_pik_dict usado:")
+    # print(v_pik_dict)
 
     # modelo_completo_diagrot_delgado = calcular_modelo_sintetico(
     #     moleculas=MOLECULAS_MODELO,
@@ -1161,27 +1161,27 @@ def procesar_molecula(MOLECULA):
     #     v_pik_dict=v_pik_dict,
     # )
 
-    modelo_completo_diagrot_opacidad = calcular_modelo_sintetico(
-        moleculas=MOLECULAS_MODELO,
-        region_name=REGION,
-        tab_mol_config=tab_mol_config,
-        resultados_parametros=resultados_diagrot,
-        fwhm_dict=fwhm_dict,
-        dict_T_cont=dict_T_contv2,
-        dict_cubos_med=dict_cubos_med,
-        fuente_parametros="diagrot",
-        modelo_radiativo="opacidad",
-        plot_lineas=False,
-        show_plots=MOSTRAR_PLOTS,
-        save_plots=True,
-        guardar_solo_final=True,
-        v_pik_dict=v_pik_dict,
-        dict_sigma=dict_sigma_vent,
-        nsigma_lineas=6.0,
-        intervalos_mol_region=INTERVALOS_MOL_REGION,
-        rutacarp_region=RUTACARP_REGION,
-        rutaregion_region=RUTAREGION_REGION,
-        )
+    # modelo_completo_diagrot_opacidad = calcular_modelo_sintetico(
+    #     moleculas=MOLECULAS_MODELO,
+    #     region_name=REGION,
+    #     tab_mol_config=tab_mol_config,
+    #     resultados_parametros=resultados_diagrot,
+    #     fwhm_dict=fwhm_dict,
+    #     dict_T_cont=dict_T_contv2,
+    #     dict_cubos_med=dict_cubos_med,
+    #     fuente_parametros="diagrot",
+    #     modelo_radiativo="opacidad",
+    #     plot_lineas=False,
+    #     show_plots=MOSTRAR_PLOTS,
+    #     save_plots=True,
+    #     guardar_solo_final=True,
+    #     v_pik_dict=v_pik_dict,
+    #     dict_sigma=dict_sigma_vent,
+    #     nsigma_lineas=6.0,
+    #     intervalos_mol_region=INTERVALOS_MOL_REGION,
+    #     rutacarp_region=RUTACARP_REGION,
+    #     rutaregion_region=RUTAREGION_REGION,
+    #     )
 
     continuar = input('¿Quieres continuar? Siguiente paso, ajuste de chi2 (S/N)')
     
@@ -1460,7 +1460,7 @@ def procesar_molecula(MOLECULA):
             )
 
         modelo_completo_chi2_opacidad = calcular_modelo_sintetico(
-            moleculas=MOLECULAS_MODELO_CHI2,
+            moleculas=MOLECULA,
             region_name=REGION,
             tab_mol_config=tab_mol_config,
             resultados_parametros=resultados_chi2_modelo,
@@ -1469,9 +1469,9 @@ def procesar_molecula(MOLECULA):
             dict_cubos_med=dict_cubos_med,
             fuente_parametros="chi2",
             modelo_radiativo="opacidad",
-            plot_lineas=False,
+            plot_lineas=True,
             show_plots=MOSTRAR_PLOTS,
-            save_plots=True,
+            save_plots=guardar_plots,
             guardar_solo_final=True,
             v_pik_dict=v_pik_dict,
             dict_sigma=dict_sigma_vent,

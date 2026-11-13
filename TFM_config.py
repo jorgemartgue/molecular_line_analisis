@@ -553,6 +553,9 @@ B0C13H3OH = 24083.5 * u.MHz
 B0OC13S = 6061.92 * u.MHz
 B0CH3CCH_v0 = 8545.877 * u.MHz
 B0CH3CCH_v1 = 8569.816 * u.MHz
+B0CH3CN_v1 = 9226.429 * u.MHz
+B0C2H3CN_v0 = 4971.164 * u.MHz
+
 
 id_cdmsC2H5OH = 46524
 id_cdmsC2H5CN = 55502
@@ -573,6 +576,9 @@ id_cdmsC13H3OH = 33502
 id_cdmsOC13S = 61502
 id_cdmsCH3CCH_v0 = 40502
 id_cdmsCH3CCH_v1 = 40504
+id_JPLCH3CN_v1 = 41010
+id_JPLC2H3CN_v0 = 53001
+
 
 freq_nofiltrarAcetona = [231372.9371] * u.MHz
 
@@ -634,6 +640,8 @@ id_splatCH3CN15 = 619
 id_splatC13H3OH = 319
 id_splatOC13S = 179
 id_splatCH3CCH_v1 = 306
+id_splatCH3CN_v1 = 1041
+id_splatC2H3CN_v0 = 758
 
 # ============================================================
 # CONFIGURACIÓN FIJA DE MOLÉCULAS
@@ -758,10 +766,21 @@ MOLECULE_CONFIG = {
         "intervalo": "Banda3",
         "catalogo": "CDMS,JPL",
         "id_splat": "id_splatCH3CN",
-        "id_cat": "id_JPLCH3CN",
+        "id_cat": "id_cdmsCH3CN",
         "B0": "B0CH3CN",
         "filtro_estructuras": "filtro_quitar_F",
         "f0": 91958.726 * u.MHz,
+    },
+    
+    "CH3CN_v1": {
+        "mol": "CH3CN",
+        "intervalo": "Banda3",
+        "catalogo": "JPL",
+        "id_splat": "id_splatCH3CN_v1",
+        "id_cat": "id_JPLCH3CN_v1",
+        "B0": "B0CH3CN_v1",
+        "filtro_estructuras": "None",
+        "f0": 92261.4 * u.MHz,
     },
 
     "CH3O-18-H": {
@@ -859,6 +878,26 @@ MOLECULE_CONFIG = {
         "id_splat": "id_splatCH3CCH_v1",
         "id_cat": "id_cdmsCH3CCH_v1",
         "B0": "B0CH3CCH_v1",
+        "filtro_estructuras": "None",
+        "f0": 102540 * u.MHz,
+    },
+    "CH3OC-13-HO": {
+        "mol": "CH3",
+        "intervalo": "Banda6",
+        "catalogo": "CDMS",
+        "id_splat": "id_splatCH3OC_13_HO",
+        "id_cat": "id_cdmsCH3OC_13_HO",
+        "B0": "B0CH3OC_13_HO",
+        "filtro_estructuras": "filtro_quedarse_v0_CH3OC_13_HO",
+        "f0": 102540 * u.MHz,
+    },
+    "C2H3CN_v0": {
+        "mol": "CH2CHCN",
+        "intervalo": "Banda6",
+        "catalogo": "JPL",
+        "id_splat": "id_splatC2H3CN_v0",
+        "id_cat": "id_JPLC2H3CN_v0",
+        "B0": "B0C2H3CN_v0",
         "filtro_estructuras": "None",
         "f0": 102540 * u.MHz,
     },
@@ -1254,6 +1293,8 @@ CHI2_FIT_ORDER_BY_BAND = {
         "CH3NCO",
         "CH3OH_v0",
         "CH3OCH3",
+        "CH3OC-13-HO",
+        "C2H3CN_v0"
     ],
 
     "Banda3": [
@@ -1261,6 +1302,7 @@ CHI2_FIT_ORDER_BY_BAND = {
         "CH3CCH_v0",
         "CH3NCO_B3",
         "C2H5OH_g_B3",
+        "CH3CN_v1"
     ],
 }
 
@@ -1348,6 +1390,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
             "CH3O-18-H": {
                 "E_max": 500 * u.K,
                 "aij_min": 1e-6 / u.s,
@@ -1408,6 +1457,21 @@ REGION_LINE_CONFIG = {
             },
             
             "CH3CCH_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
+            
+            "CH3OC-13-HO": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
+            "C2H3CN_v0": {
                 "E_max": 1000 * u.K,
                 "aij_min": 1e-6 / u.s,
                 "sijmu2_min": 0 * u.D**2,
@@ -1489,6 +1553,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [91971.1] * u.MHz,
                 "longs": [20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92261] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
             "CH3OC-13-HO": {
                 "freqs": [231669.015] * u.MHz,
                 "longs": [30] * u.km / u.s,
@@ -1532,6 +1600,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [102819, 102737] * u.MHz,
                 "longs": [30, 20] * u.km / u.s,
             },
+            "C2H3CN_v0": {
+                "freqs": [230636, 218200] * u.MHz,
+                "longs": [20, 20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -1554,13 +1626,8 @@ REGION_LINE_CONFIG = {
             "Acetona": [] * u.MHz,
             "CH3OCH3": [230368] * u.MHz,
             "CH3CN": [] * u.MHz,
-            "CH3OC-13-HO": [
-                232675,
-                231453,
-                219953,
-                219951,
-                232237,
-            ] * u.MHz,
+            "CH3CN_v1": [] * u.MHz,
+            "CH3OC-13-HO": [] * u.MHz,
             "CH3O-18-H": [231758,231736, 231687, 231788] * u.MHz,
             "C-13-H3CN": [231799, 231955, 232164] * u.MHz,
             "CH3NCO": [] * u.MHz,
@@ -1570,6 +1637,7 @@ REGION_LINE_CONFIG = {
             "CH3CCH_v0":[] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
             "CH3CCH_v1": [102788] * u.MHz,
+            "C2H3CN_v0": [] * u.MHz,
         },
 
         "chi2_no_considerar": {
@@ -1797,10 +1865,23 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [230318] * u.MHz,
             "CH3CN": [91958.7, 91980] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
-            "CH3OC-13-HO": [] * u.MHz,
+            "CH3OC-13-HO": [
+    217055.954, 217091.573, 217091.582, 217098.116, 217181.784, 217187.912,
+    219951.075, 219953.44, 219956.662, 219979.859, 218133.104, 218312.885,
+    218316.84, 230482.797, 230590.122, 230590.122, 231227.765, 231284.077,
+    231285.419, 231334.787, 231334.787, 231396.419, 231467.473, 231467.473,
+    231500.502, 231546.747, 231593.931, 231669.015, 231669.512, 231693.359,
+    231693.362, 231696.43, 231812.245, 231986.947, 231987.114, 231997.257,
+    232124.384, 232124.384, 232159.557, 232159.558, 232161.21, 232236.584,
+    232369.754, 232436.527, 232591.451, 232622.321, 232622.321, 232675.103,
+    232751.677, 232751.677, 232761.487, 232847.374, 232850.19, 232850.19,
+    232923.079, 232923.079, 232954.902, 233241.176, 233308.668,
+] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [] * u.MHz,
             "CH3CCH_v1": [] * u.MHz,
+            "CH3CN_v1": [] * u.MHz,
+            "C2H3CN_v0": [] * u.MHz,
         },
     },
 
@@ -1939,6 +2020,27 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
+            "CH3OC-13-HO": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
+            "C2H3CN_v0": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 30 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -2050,9 +2152,16 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
-            
+            "CH3CN_v1": {
+                "freqs": [92261] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
+            "C2H3CN_v0": {
+                "freqs": [230636, 218200] * u.MHz,
+                "longs": [20, 20] * u.km / u.s,
+            },
         },
-
+        
         "diagrot_no_considerar": {
             "C2H5OH_g": [] * u.MHz,
             "C2H5OH_anti": [] * u.MHz,
@@ -2074,11 +2183,10 @@ REGION_LINE_CONFIG = {
             "CH3OCH3": [230368] * u.MHz,
             "CH3CN": [] * u.MHz,
             "CH3OC-13-HO": [
-                232675,
-                231453,
-                219953,
-                219951,
-                232237,
+                216148,
+                231467,
+                231523,
+                232379
             ] * u.MHz,
             "CH3O-18-H": [231736, 231687, 231788] * u.MHz,
             "C-13-H3CN": [231799, 231955] * u.MHz,
@@ -2088,6 +2196,8 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz,
+            "C2H3CN_v0": [] * u.MHz,
         },
 
         "chi2_no_considerar": {
@@ -2274,7 +2384,7 @@ REGION_LINE_CONFIG = {
                 230346,
                 219610,
                 231953,
-                231988,
+                231988,            
                 232749,
                 231373,
                 231785,
@@ -2315,9 +2425,22 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [230318] * u.MHz,
             "CH3CN": [91958.7, 91971.1, 91980] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
-            "CH3OC-13-HO": [] * u.MHz,
+            "CH3OC-13-HO": [
+    217055.954, 217091.573, 217091.582, 217098.116, 217181.784, 217187.912,
+    219951.075, 219953.44, 219956.662, 219979.859, 218133.104, 218312.885,
+    218316.84, 230482.797, 230590.122, 230590.122, 231227.765, 231284.077,
+    231285.419, 231334.787, 231334.787, 231396.419, 231467.473, 231467.473,
+    231500.502, 231546.747, 231593.931, 231669.015, 231669.512, 231693.359,
+    231693.362, 231696.43, 231812.245, 231986.947, 231987.114, 231997.257,
+    232124.384, 232124.384, 232159.557, 232159.558, 232161.21, 232236.584,
+    232369.754, 232436.527, 232591.451, 232622.321, 232622.321, 232675.103,
+    232751.677, 232751.677, 232761.487, 232847.374, 232850.19, 232850.19,
+    232923.079, 232923.079, 232954.902, 233241.176, 233308.668,
+] * u.MHz,
             "CH3CCH_v0":[] * u.MHz,
-            "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz
+            "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz,
+            "C2H3CN_v0": [] * u.MHz,
         },
     },
 
@@ -2457,6 +2580,20 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
+            "CH3OC-13-HO": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -2568,6 +2705,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92261] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -2590,13 +2731,7 @@ REGION_LINE_CONFIG = {
             "Acetona": [] * u.MHz,
             "CH3OCH3": [230368] * u.MHz,
             "CH3CN": [] * u.MHz,
-            "CH3OC-13-HO": [
-                232675,
-                231453,
-                219953,
-                219951,
-                232237,
-            ] * u.MHz,
+            "CH3OC-13-HO": [] * u.MHz,
             "CH3O-18-H": [231736, 231687, 231788] * u.MHz,
             "C-13-H3CN": [231799, 231955] * u.MHz,
             "CH3NCO": [] * u.MHz,
@@ -2605,6 +2740,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -2832,9 +2968,21 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [230318] * u.MHz,
             "CH3CN": [91958.7, 91971.1, 91980] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
-            "CH3OC-13-HO": [] * u.MHz,
+            "CH3OC-13-HO": [
+    217055.954, 217091.573, 217091.582, 217098.116, 217181.784, 217187.912,
+    219951.075, 219953.44, 219956.662, 219979.859, 218133.104, 218312.885,
+    218316.84, 230482.797, 230590.122, 230590.122, 231227.765, 231284.077,
+    231285.419, 231334.787, 231334.787, 231396.419, 231467.473, 231467.473,
+    231500.502, 231546.747, 231593.931, 231669.015, 231669.512, 231693.359,
+    231693.362, 231696.43, 231812.245, 231986.947, 231987.114, 231997.257,
+    232124.384, 232124.384, 232159.557, 232159.558, 232161.21, 232236.584,
+    232369.754, 232436.527, 232591.451, 232622.321, 232622.321, 232675.103,
+    232751.677, 232751.677, 232761.487, 232847.374, 232850.19, 232850.19,
+    232923.079, 232923.079, 232954.902, 233241.176, 233308.668,
+] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
-            "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz
+            "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [92249.6, 92258.4] * u.MHz
         },
     },
 
@@ -2973,6 +3121,20 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
+            "CH3OC-13-HO": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -3084,6 +3246,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -3121,6 +3287,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -3348,9 +3515,21 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [230318] * u.MHz,
             "CH3CN": [91958.7, 91971.1, 91980] * u.MHz,
             "C2H5OH_g_B3": [] * u.MHz,
-            "CH3OC-13-HO": [] * u.MHz,
+            "CH3OC-13-HO": [
+    217055.954, 217091.573, 217091.582, 217098.116, 217181.784, 217187.912,
+    219951.075, 219953.44, 219956.662, 219979.859, 218133.104, 218312.885,
+    218316.84, 230482.797, 230590.122, 230590.122, 231227.765, 231284.077,
+    231285.419, 231334.787, 231334.787, 231396.419, 231467.473, 231467.473,
+    231500.502, 231546.747, 231593.931, 231669.015, 231669.512, 231693.359,
+    231693.362, 231696.43, 231812.245, 231986.947, 231987.114, 231997.257,
+    232124.384, 232124.384, 232159.557, 232159.558, 232161.21, 232236.584,
+    232369.754, 232436.527, 232591.451, 232622.321, 232622.321, 232675.103,
+    232751.677, 232751.677, 232761.487, 232847.374, 232850.19, 232850.19,
+    232923.079, 232923.079, 232954.902, 233241.176, 233308.668,
+] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
-            "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz
+            "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+            "CH3CN_v1" : [] * u.MHz
         },
     },
 
@@ -3489,6 +3668,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -3600,6 +3786,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -3637,6 +3827,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -3868,6 +4059,7 @@ REGION_LINE_CONFIG = {
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912,105101,
                           104999, 104839, 104671, 102819] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
     },
 
@@ -4006,6 +4198,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -4117,6 +4316,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -4154,6 +4357,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -4384,7 +4588,9 @@ REGION_LINE_CONFIG = {
             "CH3OC-13-HO": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
+
     },
 
     "e8mm": {
@@ -4522,6 +4728,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -4633,6 +4846,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -4670,6 +4887,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -4900,6 +5118,7 @@ REGION_LINE_CONFIG = {
             "CH3OC-13-HO": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
     },
 
@@ -5038,6 +5257,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -5149,6 +5375,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -5186,6 +5416,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -5416,6 +5647,7 @@ REGION_LINE_CONFIG = {
             "CH3OC-13-HO": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
     },
 
@@ -5554,6 +5786,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -5665,6 +5904,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -5702,6 +5945,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912, 105101, 104671, 104638] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -5933,6 +6177,7 @@ REGION_LINE_CONFIG = {
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912,105101,
                           104999, 104839, 104671, 102819] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
     },
 
@@ -6071,6 +6316,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -6182,6 +6434,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -6219,6 +6475,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [92234.5] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -6449,7 +6706,7 @@ REGION_LINE_CONFIG = {
             "CH3OC-13-HO": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
-            
+            "CH3CN_v1": [92234.5] * u.MHz
         },
     },
 
@@ -6588,6 +6845,13 @@ REGION_LINE_CONFIG = {
                 "filt_inter": 0.5,
                 "frec_nofiltrar": [] * u.MHz,
             },
+            "CH3CN_v1": {
+                "E_max": 1000 * u.K,
+                "aij_min": 1e-6 / u.s,
+                "sijmu2_min": 0 * u.D**2,
+                "filt_inter": 0.5,
+                "frec_nofiltrar": [92353.5] * u.MHz,
+            },
         },
 
         "calibracion": {
@@ -6683,6 +6947,10 @@ REGION_LINE_CONFIG = {
                 "freqs": [103023,105101] * u.MHz,
                 "longs": [20, 20] * u.km / u.s,
             },
+            "CH3CN_v1": {
+                "freqs": [92353.5] * u.MHz,
+                "longs": [20] * u.km / u.s,
+            },
         },
 
         "diagrot_no_considerar": {
@@ -6720,6 +6988,7 @@ REGION_LINE_CONFIG = {
             "OC-13-S": [] * u.MHz,
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
 
         "chi2_no_considerar": {
@@ -6951,6 +7220,7 @@ REGION_LINE_CONFIG = {
             "CH3CCH_v0": [] * u.MHz,
             "CH3NCO_B3": [104856, 104680, 104660, 102912,105101,
                           104999, 104839, 104671, 102819] * u.MHz,
+            "CH3CN_v1": [] * u.MHz
         },
     },
 
@@ -7579,6 +7849,13 @@ REGION_LINE_CONFIG = {
             "filt_inter": 0.5,
             "frec_nofiltrar": [] * u.MHz,
         },
+        "CH3CN_v1": {
+            "E_max": 1000 * u.K,
+            "aij_min": 1e-6 / u.s,
+            "sijmu2_min": 0 * u.D**2,
+            "filt_inter": 0.5,
+            "frec_nofiltrar": [] * u.MHz,
+        },
     },
 
     "calibracion": {
@@ -7680,6 +7957,11 @@ REGION_LINE_CONFIG = {
             "freqs": [103023,105101] * u.MHz,
             "longs": [20, 20] * u.km / u.s,
         },
+        "CH3CN_v1": {
+            "freqs": [92353.5] * u.MHz,
+            "longs": [20] * u.km / u.s,
+        },
+
     },
 
     "diagrot_no_considerar": {
@@ -7717,6 +7999,7 @@ REGION_LINE_CONFIG = {
         "OC-13-S": [] * u.MHz,
         "CH3CCH_v0": [] * u.MHz,
         "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+        "CH3CN_v1": [] * u.MHz
     },
 
     "chi2_no_considerar": {
@@ -7947,6 +8230,7 @@ REGION_LINE_CONFIG = {
         "CH3OC-13-HO": [] * u.MHz,
         "CH3CCH_v0": [] * u.MHz,
         "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+        "CH3CN_v1": [] * u.MHz
     },
 },
     
@@ -8085,6 +8369,14 @@ REGION_LINE_CONFIG = {
             "filt_inter": 0.5,
             "frec_nofiltrar": [] * u.MHz,
         },
+        "CH3CN_v1": {
+            "E_max": 1000 * u.K,
+            "aij_min": 1e-6 / u.s,
+            "sijmu2_min": 0 * u.D**2,
+            "filt_inter": 0.5,
+            "frec_nofiltrar": [92353.5] * u.MHz,
+        },
+        
     },
 
     "calibracion": {
@@ -8182,6 +8474,10 @@ REGION_LINE_CONFIG = {
             "freqs": [103023,105101] * u.MHz,
             "longs": [20, 20] * u.km / u.s,
         },
+        "CH3CN_v1": {
+            "freqs": [92353.5] * u.MHz,
+            "longs": [20] * u.km / u.s,
+        },
     },
 
     "diagrot_no_considerar": {
@@ -8215,6 +8511,7 @@ REGION_LINE_CONFIG = {
         "OC-13-S": [] * u.MHz,
         "CH3CCH_v0": [] * u.MHz,
         "CH3NCO_B3": [105100, 104660, 102912] * u.MHz,
+        "CH3CN_v1": [] * u.MHz
     },
 
     "chi2_no_considerar": {
@@ -8445,6 +8742,7 @@ REGION_LINE_CONFIG = {
         "CH3OC-13-HO": [] * u.MHz,
         "CH3CCH_v0": [] * u.MHz,
         "CH3NCO_B3": [104856, 104680, 104660, 102912] * u.MHz,
+        "CH3CN_v1": [] * u.MHz
     },
 },
 }
